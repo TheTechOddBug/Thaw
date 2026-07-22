@@ -2,6 +2,7 @@ name: "PR Metadata"
 
 # Labels (type/area) + shape checks (base/title/Closes; size warn-only).
 # Uses pull_request_target so fork PRs can still receive labels.
+# Crowdin sync PRs are skipped — they are translation-only and often huge.
 
 on:
   pull_request_target:
@@ -21,6 +22,12 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             if (!pr) return;
+
+            // Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
+            if ((pr.title || '').toLowerCase().includes('crowdin')) {
+              core.info('Skipping PR metadata for Crowdin sync PR.');
+              return;
+            }
 
             const body = pr.body || '';
             const owner = context.repo.owner;
@@ -208,6 +215,12 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             if (!pr) return;
+
+            // Crowdin sync PRs are trusted translation dumps; skip title/size/Closes checks.
+            if ((pr.title || '').toLowerCase().includes('crowdin')) {
+              core.info('Skipping PR conventions for Crowdin sync PR.');
+              return;
+            }
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
