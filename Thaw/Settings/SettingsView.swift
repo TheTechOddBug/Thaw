@@ -90,11 +90,17 @@ struct SettingsView: View {
     private var settingsPane: some View {
         switch navigationState.settingsNavigationIdentifier {
         case .general:
-            GeneralSettingsPane(settings: appState.settings.general)
+            GeneralSettingsPane(
+                settings: appState.settings.general,
+                advancedSettings: appState.settings.advanced
+            )
+        case .menuBarLayout:
+            MenuBarLayoutSettingsPane(
+                itemManager: appState.itemManager,
+                advancedSettings: appState.settings.advanced
+            )
         case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .menuBarLayout:
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .hotkeys:
