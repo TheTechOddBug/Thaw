@@ -5798,12 +5798,14 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        guard let appState else {
-            MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
-            return
-        }
         guard !itemOrder.isEmpty else {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: no item order, skipping")
+            concludeProfileApplyWithoutMoves(source: source, items: [])
+            return
+        }
+        guard let appState else {
+            MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
+            clearProfileState(source: source, items: [])
             return
         }
 
@@ -5843,6 +5845,7 @@ extension MenuBarItemManager {
               )
         else {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing control items")
+            clearProfileState(source: source, items: items)
             return
         }
 
@@ -6175,8 +6178,7 @@ extension MenuBarItemManager {
             )
             if fullSequence.isEmpty {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
@@ -6497,6 +6499,7 @@ extension MenuBarItemManager {
                     alwaysHiddenControlItemWindowID: alwaysHiddenWID
                 ) else {
                     MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
+                    clearProfileState(source: source, items: items)
                     scheduleDeferredCacheRefresh()
                     return
                 }
