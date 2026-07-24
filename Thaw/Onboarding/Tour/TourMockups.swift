@@ -183,7 +183,9 @@ final class ThawManagementMockupModel {
 
 struct ManagementSlideMockup: View {
     let model: ThawManagementMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -239,13 +241,16 @@ final class ThawAppearanceMockupModel {
     }
 
     func select(_ index: Int) {
+        guard index != styleIndex else { return }
         withAnimation(.spring(duration: 0.4)) { styleIndex = index }
     }
 }
 
 struct AppearanceSlideMockup: View {
     let model: ThawAppearanceMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     private var style: DemoBarStyle {
         switch model.styleIndex {
@@ -265,8 +270,7 @@ struct AppearanceSlideMockup: View {
             )
             SlideHUD {
                 HStack(spacing: 0) {
-                    ForEach(ThawAppearanceMockupModel.styleLabels, id: \.self) { label in
-                        let i = ThawAppearanceMockupModel.styleLabels.firstIndex(of: label) ?? 0
+                    ForEach(Array(ThawAppearanceMockupModel.styleLabels.enumerated()), id: \.offset) { i, label in
                         Button(label) {
                             onInteraction()
                             model.select(i)
@@ -309,7 +313,9 @@ final class ThawHotkeysMockupModel {
 
 struct HotkeysSlideMockup: View {
     let model: ThawHotkeysMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     private func triggerFromUser() {
         onInteraction()
@@ -326,7 +332,7 @@ struct HotkeysSlideMockup: View {
             )
             SlideHUD {
                 Button(action: triggerFromUser) {
-                    Label(String("Press ⌃ Space"), systemImage: "keyboard")
+                    Label(String(localized: "Press ⌃ Space"), systemImage: "keyboard")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -382,7 +388,9 @@ final class ThawProfilesMockupModel {
 
 struct ProfilesSlideMockup: View {
     let model: ThawProfilesMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -396,8 +404,7 @@ struct ProfilesSlideMockup: View {
 
             SlideHUD {
                 HStack(spacing: 0) {
-                    ForEach(ThawProfilesMockupModel.focusModes, id: \.name) { mode in
-                        let i = ThawProfilesMockupModel.focusModes.firstIndex { $0.name == mode.name } ?? 0
+                    ForEach(Array(ThawProfilesMockupModel.focusModes.enumerated()), id: \.offset) { i, mode in
                         Button {
                             onInteraction()
                             model.select(i)

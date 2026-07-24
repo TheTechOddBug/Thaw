@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import Observation
 
 // MARK: - ControlItem
 
@@ -15,7 +16,7 @@ import Combine
 @MainActor
 final class ControlItem {
     /// An identifier for a control item.
-    enum Identifier: String, CaseIterable {
+    nonisolated enum Identifier: String, CaseIterable {
         /// The identifier for the control item for the visible section.
         case visible = "Thaw.ControlItem.Visible"
         /// The identifier for the control item for the hidden section.
@@ -54,7 +55,7 @@ final class ControlItem {
     }
 
     /// A namespace for control item lengths.
-    private enum Lengths {
+    private nonisolated enum Lengths {
         static let standard: CGFloat = NSStatusItem.variableLength
         static let expanded: CGFloat = 10000
     }
@@ -101,6 +102,7 @@ final class ControlItem {
             }
         }
 
+        @MainActor
         deinit {
             guard !isDisposed else {
                 return
@@ -171,6 +173,29 @@ final class ControlItem {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Tasks backing settings-observation reactions in `configureCancellables()`
+    /// and `configureStatusItemCancellables()`. `GeneralSettings` and
+    /// `AdvancedSettings` are `@Observable` (not Combine `ObservableObject`s),
+    /// so their property changes are observed via the `Observations` async
+    /// sequence instead of `$property` publishers.
+    private var showIceIconObservationTask: Task<Void, Never>?
+    private var iceIconObservationTask: Task<Void, Never>?
+    private var sectionDividerStyleObservationTask: Task<Void, Never>?
+    private var alwaysHiddenSectionObservationTask: Task<Void, Never>?
+
+    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
+    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
+    private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
+
+    deinit {
+        showIceIconObservationTask?.cancel()
+        iceIconObservationTask?.cancel()
+        sectionDividerStyleObservationTask?.cancel()
+        alwaysHiddenSectionObservationTask?.cancel()
+        isDraggingMenuBarItemObservationTask?.cancel()
+    }
 
     /// Storage for observers whose subscriptions are bound to the specific
     /// `NSStatusItem` instance backing `storage`. Combine's KVO publishers
@@ -272,49 +297,48 @@ final class ControlItem {
             .store(in: &c)
 
         if let appState {
-            appState.$isDraggingMenuBarItem
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] isDragging in
-                    guard let self else {
-                        return
+            // `appState` is now `@Observable` (wave 4), so it no longer has
+            // an `$isDraggingMenuBarItem` publisher.
+            isDraggingMenuBarItemObservationTask?.cancel()
+            isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
+                var previous: Bool?
+                let changes = Observations { appState?.isDraggingMenuBarItem }
+                for await isDragging in changes {
+                    guard let self else { return }
+                    guard let isDragging, isDragging != previous else { continue }
+                    previous = isDragging
+                    updateStatusItem()
+                }
+            }
+
+            if identifier == .visible {
+                let generalSettings = appState.settings.general
+                showIceIconObservationTask = Task { [weak self] in
+                    let changes = Observations { generalSettings.showIceIcon }
+                    for await shouldShow in changes {
+                        guard let self else { return }
+                        setIceIconDisplayed(shouldShow)
                     }
-                    if isDragging {
+                }
+
+                iceIconObservationTask = Task { [weak self] in
+                    let changes = Observations { (generalSettings.iceIcon, generalSettings.customIceIconIsTemplate) }
+                    for await _ in changes {
+                        guard let self else { return }
                         updateStatusItem()
                     }
                 }
-                .store(in: &c)
-
-            if identifier == .visible {
-                appState.settings.general.$showIceIcon
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] shouldShow in
-                        guard let self else {
-                            return
-                        }
-                        setIceIconDisplayed(shouldShow)
-                    }
-                    .store(in: &c)
-
-                appState.settings.general.$iceIcon
-                    .combineLatest(appState.settings.general.$customIceIconIsTemplate)
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] _ in
-                        self?.updateStatusItem()
-                    }
-                    .store(in: &c)
             }
 
             if isSectionDivider {
-                appState.settings.advanced.$sectionDividerStyle
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] _ in
-                        self?.updateStatusItem()
+                let advancedSettings = appState.settings.advanced
+                sectionDividerStyleObservationTask = Task { [weak self] in
+                    let changes = Observations { advancedSettings.sectionDividerStyle }
+                    for await _ in changes {
+                        guard let self else { return }
+                        updateStatusItem()
                     }
-                    .store(in: &c)
+                }
             }
         }
 
@@ -361,21 +385,33 @@ final class ControlItem {
             .store(in: &c)
 
         if identifier == .alwaysHidden, let appState {
-            appState.settings.advanced.$enableAlwaysHiddenSection
-                .combineLatest(statusItem.publisher(for: \.isVisible))
+            let advancedSettings = appState.settings.advanced
+            let reactToAlwaysHiddenSectionState: () -> Void = { [weak self] in
+                guard let self else { return }
+                if advancedSettings.enableAlwaysHiddenSection {
+                    addToMenuBar()
+                } else {
+                    removeFromMenuBar()
+                }
+            }
+
+            // Re-derive add/remove whenever isVisible changes (statusItem
+            // KVO, still Combine) — mirrors the previous combineLatest's
+            // re-trigger on the second element, even though only the first
+            // (shouldEnable) was ever read from the emitted pair.
+            statusItem.publisher(for: \.isVisible)
                 .removeDuplicates()
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] shouldEnable, _ in
-                    guard let self else {
-                        return
-                    }
-                    if shouldEnable {
-                        addToMenuBar()
-                    } else {
-                        removeFromMenuBar()
-                    }
-                }
+                .sink { _ in reactToAlwaysHiddenSectionState() }
                 .store(in: &c)
+
+            alwaysHiddenSectionObservationTask?.cancel()
+            alwaysHiddenSectionObservationTask = Task {
+                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                for await _ in changes {
+                    reactToAlwaysHiddenSectionState()
+                }
+            }
         }
 
         statusItemCancellables = c
@@ -407,6 +443,7 @@ final class ControlItem {
         storage.dispose()
         storage = StatusItemStorage(controlItem: self)
         configureStatusItemCancellables()
+        updateStatusItem()
     }
 
     /// Updates the appearance of the status item using the current hiding state.
@@ -918,7 +955,7 @@ final class ControlItem {
 
 /// Proxy getters and setters for a control item's stored
 /// UserDefaults values.
-enum ControlItemDefaults {
+nonisolated enum ControlItemDefaults {
     /// Accesses the value associated with the specified key
     /// and autosave name.
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
@@ -1004,7 +1041,7 @@ enum ControlItemDefaults {
 
 // MARK: - ControlItemDefaults.Key
 
-extension ControlItemDefaults {
+nonisolated extension ControlItemDefaults {
     /// Keys used to look up UserDefaults values for control items.
     struct Key<Value> {
         /// The raw value of the key.
@@ -1024,14 +1061,14 @@ extension ControlItemDefaults {
 
 // MARK: ControlItemDefaults.Key<CGFloat>
 
-extension ControlItemDefaults.Key<CGFloat> {
+nonisolated extension ControlItemDefaults.Key<CGFloat> {
     /// String key: "NSStatusItem Preferred Position autosaveName"
     static let preferredPosition = Self(rawValue: "Preferred Position")
 }
 
 // MARK: ControlItemDefaults.Key<Bool>
 
-extension ControlItemDefaults.Key<Bool> {
+nonisolated extension ControlItemDefaults.Key<Bool> {
     /// String key: "NSStatusItem Visible autosaveName"
     static let visible = Self(rawValue: "Visible")
 

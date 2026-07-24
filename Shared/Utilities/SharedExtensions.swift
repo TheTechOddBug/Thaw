@@ -13,7 +13,7 @@ import Dispatch
 
 extension CGError {
     /// A string to use for logging purposes.
-    var logString: String {
+    nonisolated var logString: String {
         switch self {
         case .success: "\(rawValue): success"
         case .failure: "\(rawValue): failure"

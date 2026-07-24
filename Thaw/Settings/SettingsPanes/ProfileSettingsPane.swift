@@ -60,7 +60,9 @@ struct ProfileSettingsPane: View {
             presenting: profileToDelete
         ) { id in
             Button("Delete", role: .destructive) { deleteProfile(id: id) }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                // Intentionally empty: dismisses the alert, no other action needed.
+            }
         } message: { id in
             if let profile = profileManager.profiles.first(where: { $0.id == id }) {
                 Text("Are you sure you want to delete the profile \"\(profile.name)\"? This cannot be undone.")
@@ -327,7 +329,7 @@ struct ProfileSettingsPane: View {
             }
         }
         if failed > 0 {
-            errorMessage = String(localized: "Failed to update configuration on \(failed) profiles.")
+            errorMessage = String(localized: "Failed to update configuration on ^[\(failed) profiles](inflect: true).")
             showingError = true
         }
     }
@@ -471,10 +473,14 @@ struct ProfileSettingsPane: View {
         }
 
         let connectedIDs = Set(displays.map(\.id))
+        // Multiple profiles can share an associated display; track the UUIDs
+        // already appended so ForEach receives unique identities.
+        var seenUUIDs = connectedIDs
         for profile in profileManager.profiles {
             guard let uuid = profile.associatedDisplayUUID,
-                  !connectedIDs.contains(uuid)
+                  !seenUUIDs.contains(uuid)
             else { continue }
+            seenUUIDs.insert(uuid)
             let cachedName = profile.associatedDisplayName ?? uuid
             displays.append(DisplayInfo(
                 id: uuid,

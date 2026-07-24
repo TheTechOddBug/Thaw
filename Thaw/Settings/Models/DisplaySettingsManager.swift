@@ -16,53 +16,106 @@ import Combine
 /// When a display has no explicit configuration, `DisplayIceBarConfiguration.defaultConfiguration`
 /// is returned.
 @MainActor
-final class DisplaySettingsManager: ObservableObject {
+@Observable
+final class DisplaySettingsManager {
+    @ObservationIgnored
     private let diagLog = DiagLog(category: "DisplaySettingsManager")
 
     /// Per-display configurations, keyed by display UUID string.
-    @Published var configurations: [String: DisplayIceBarConfiguration] = [:]
+    ///
+    /// `didSet` both persists the new value and re-derives the active
+    /// display's spacing, replacing the previous `$configurations`
+    /// Combine pipelines (one for persistence, one — `removeDuplicates()`
+    /// — for the spacing reaction). Note that assignments made in
+    /// `loadInitialState()` DO trigger this `didSet` (the exemption only
+    /// covers assignments written directly in `init`, not in methods it
+    /// calls): the resulting persistence is a harmless round-trip of the
+    /// just-loaded data, and the spacing apply is a no-op because
+    /// `appState` is still nil at that point.
+    var configurations: [String: DisplayIceBarConfiguration] = [:] {
+        didSet {
+            guard oldValue != configurations else { return }
+            persistConfigurations()
+            applyActiveDisplaySpacing(reason: "configurationsChanged")
+        }
+    }
 
     /// The global configuration template applied to all displays by the
     /// Apply-to-All action in the Displays pane and used as the seed for
     /// newly connected displays. Persisted independently from
     /// configurations so the template survives display disconnects, and
     /// captured by every Profile so each profile carries its own global.
-    @Published var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
+    var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration {
+        didSet {
+            guard oldValue != globalConfiguration else { return }
+            do {
+                let data = try encoder.encode(globalConfiguration)
+                Defaults.set(data, forKey: .globalDisplayConfiguration)
+            } catch {
+                diagLog.error("Failed to encode global display configuration: \(error)")
+            }
+        }
+    }
 
     /// Cache of previously-seen displays (name + notch state), keyed by
     /// display UUID. Lets the Displays pane show settings rows for
     /// disconnected displays so users can edit them without having to
     /// re-connect the display first.
-    @Published var knownDisplays: [String: KnownDisplay] = [:]
+    var knownDisplays: [String: KnownDisplay] = [:] {
+        didSet {
+            guard oldValue != knownDisplays else { return }
+            do {
+                let data = try encoder.encode(knownDisplays)
+                Defaults.set(data, forKey: .knownDisplays)
+            } catch {
+                diagLog.error("Failed to encode known display cache: \(error)")
+            }
+        }
+    }
 
     /// Whether Thaw asks for confirmation before a spacing change relaunches
     /// menu bar apps. When true, the automatic display-transition path shows
     /// a just-in-time prompt and the Displays pane shows its Apply/global
     /// confirmation alerts. When false, both apply without asking.
-    @Published var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+    var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch {
+        didSet {
+            guard oldValue != confirmSpacingRelaunch else { return }
+            Defaults.set(confirmSpacingRelaunch, forKey: .confirmSpacingRelaunch)
+        }
+    }
 
     /// When confirmSpacingRelaunch is off and a profile is active, selects
     /// whether an applied spacing change is saved to the active profile only
     /// or to every profile.
-    @Published var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+    var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope {
+        didSet {
+            guard oldValue != unconfirmedSpacingProfileScope else { return }
+            Defaults.set(unconfirmedSpacingProfileScope.rawValue, forKey: .unconfirmedSpacingProfileScope)
+        }
+    }
 
     /// Storage for internal observers.
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Task backing the swift-async-algorithms screen-parameters debounce (see
-    /// ``configureCancellables()``). Held so it is cancelled in `deinit`,
+    /// ``configureObservers()``). Held so it is cancelled in `deinit`,
     /// matching the lifetime of the Combine cancellables above; its notification
     /// observer is owned inside the task and removed when it ends.
+    @ObservationIgnored
     private var screenParametersTask: Task<Void, Never>?
 
     /// JSON encoder for persistence.
+    @ObservationIgnored
     private let encoder = JSONEncoder()
 
     /// JSON decoder for persistence.
+    @ObservationIgnored
     private let decoder = JSONDecoder()
 
     /// Reference to AppState for driving spacingManager and itemManager from
     /// active-display configuration changes. Held weakly to avoid retain cycles.
+    @ObservationIgnored
     private weak var appState: AppState?
 
     /// UUID of the active menu bar display the last time spacing was applied.
@@ -80,11 +133,21 @@ final class DisplaySettingsManager: ObservableObject {
         Bridging.getActiveMenuBarDisplayUUID()
     }
 
+    /// Loads persisted state immediately at construction time. Swift's
+    /// `didSet` skips only assignments written directly in the declaring
+    /// class's own `init`; assignments made inside `loadInitialState()` (an
+    /// ordinary method called from here) DO fire the observers. That is
+    /// safe: persisting back the just-loaded data is an identical
+    /// round-trip, and `applyActiveDisplaySpacing` returns early because
+    /// `appState` is not wired up until ``performSetup(with:)``.
+    init() {
+        loadInitialState()
+    }
+
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
-        loadInitialState()
-        configureCancellables()
+        configureObservers()
         captureCurrentlyConnectedDisplays()
     }
 
@@ -101,7 +164,7 @@ final class DisplaySettingsManager: ObservableObject {
         var changed = false
         var seededConfigurations = configurations
         var configurationsChanged = false
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -214,10 +277,9 @@ final class DisplaySettingsManager: ObservableObject {
     /// value. Without this, applyActiveDisplaySpacing on first launch reads
     /// the default offset of 0, computes target = 16, sees on-disk = N, and
     /// fires a relaunch wave that rewrites the user's manual setting back to
-    /// 16. The seeded entries are written to Defaults inline because the
-    /// persistence sink is not yet wired at loadInitialState time; without
-    /// the explicit save, subsequent launches would re-seed on every start
-    /// instead of remembering the adopted value. The padding key is not
+    /// 16. The assignment to `configurations` below triggers its `didSet`,
+    /// which persists the seeded entries, so subsequent launches remember
+    /// the adopted value instead of re-seeding. The padding key is not
     /// consulted because Thaw drives both keys from a single offset; users
     /// whose padding diverges from spacing will see one normalising relaunch
     /// on first launch but no recurring waves thereafter.
@@ -229,7 +291,7 @@ final class DisplaySettingsManager: ObservableObject {
         }
         let offset = Double(onDisk - Self.systemSpacingDefault)
         var seeded = configurations
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -240,15 +302,9 @@ final class DisplaySettingsManager: ObservableObject {
         }
         guard seeded != configurations else { return }
         configurations = seeded
-        do {
-            let data = try encoder.encode(seeded)
-            Defaults.set(data, forKey: .displayIceBarConfigurations)
-            diagLog.info(
-                "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
-            )
-        } catch {
-            diagLog.error("Failed to persist seeded per-display configurations: \(error)")
-        }
+        diagLog.info(
+            "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
+        )
     }
 
     deinit {
@@ -260,51 +316,26 @@ final class DisplaySettingsManager: ObservableObject {
 
     // MARK: - Persistence
 
-    /// Configures Combine sinks to persist configurations on change.
-    private func configureCancellables() {
+    /// Encodes and persists `configurations`, matching the previous
+    /// `$configurations.dropFirst()` persistence sink. Called from
+    /// `configurations`'s `didSet` (including the seeding assignment in
+    /// `seedConfigurationsFromSystemSpacing()`).
+    private func persistConfigurations() {
+        do {
+            let data = try encoder.encode(configurations)
+            Defaults.set(data, forKey: .displayIceBarConfigurations)
+        } catch {
+            diagLog.error("Failed to encode per-display configurations: \(error)")
+        }
+    }
+
+    /// Configures the manager's non-persistence internal observers: the
+    /// debounced screen-parameters watcher and the Settings-URI notification
+    /// subscription. Property persistence is now driven by `didSet` on each
+    /// property (see the property declarations above), replacing the
+    /// previous `$property.persistToDefaults`/manual `.dropFirst()` sinks.
+    private func configureObservers() {
         var c = Set<AnyCancellable>()
-
-        $configurations
-            .dropFirst() // Skip the initial emission during setup
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] configs in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(configs)
-                    Defaults.set(data, forKey: .displayIceBarConfigurations)
-                } catch {
-                    diagLog.error("Failed to encode per-display configurations: \(error)")
-                }
-            }
-            .store(in: &c)
-
-        $knownDisplays
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] cache in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(cache)
-                    Defaults.set(data, forKey: .knownDisplays)
-                } catch {
-                    diagLog.error("Failed to encode known display cache: \(error)")
-                }
-            }
-            .store(in: &c)
-
-        $globalConfiguration
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] config in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(config)
-                    Defaults.set(data, forKey: .globalDisplayConfiguration)
-                } catch {
-                    diagLog.error("Failed to encode global display configuration: \(error)")
-                }
-            }
-            .store(in: &c)
 
         // Listen for display connect/disconnect to log changes, refresh the
         // known-display cache, and re-derive the active display's spacing.
@@ -338,17 +369,7 @@ final class DisplaySettingsManager: ObservableObject {
             defer { NotificationCenter.default.removeObserver(observer) }
             for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
                 guard let self else { break }
-                // Ignore the self-inflicted parameter change from the virtual
-                // display the provoker briefly creates and tears down. Reacting
-                // to it (a no-op spacing preflight) cancels the in-flight item
-                // cache cycle mid-resolution and surfaces a bar of orphans for
-                // several seconds. The phantom never changes the active menu bar
-                // display, so there is nothing here to apply.
-                if let until = VirtualDisplayProvoker.displayReactionsSuppressedUntil, Date() < until {
-                    diagLog.info("Screen parameters changed during virtual-display provoke; ignoring self-inflicted event")
-                    continue
-                }
-                diagLog.info("Screen parameters changed — \(NSScreen.managedScreens.count) screen(s) connected")
+                diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
                 captureCurrentlyConnectedDisplays()
                 let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
                 if Self.shouldSkipSpacingApply(
@@ -362,18 +383,10 @@ final class DisplaySettingsManager: ObservableObject {
             }
         }
 
-        // Whenever per-display configurations change (user edit, profile
-        // load), re-derive what the active display's spacing should be and
-        // apply it. The no-op guard inside applyOffset() makes this free
-        // when on-disk already matches.
-        $configurations
-            .dropFirst()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.applyActiveDisplaySpacing(reason: "configurationsChanged")
-            }
-            .store(in: &c)
+        // Re-deriving the active display's spacing whenever per-display
+        // configurations change (user edit, profile load) is now handled by
+        // `configurations`'s `didSet`. The no-op guard inside applyOffset()
+        // makes this free when on-disk already matches.
 
         // Listen for external per-display settings changes via Settings URI
         NotificationCenter.default
@@ -383,13 +396,6 @@ final class DisplaySettingsManager: ObservableObject {
                 self?.handleExternalPerDisplaySettingsChange(notification)
             }
             .store(in: &c)
-
-        $confirmSpacingRelaunch.persistToDefaults(key: .confirmSpacingRelaunch, in: &c)
-        $unconfirmedSpacingProfileScope.persistToDefaults(
-            key: .unconfirmedSpacingProfileScope,
-            transform: \.rawValue,
-            in: &c
-        )
 
         cancellables = c
     }
@@ -506,7 +512,7 @@ final class DisplaySettingsManager: ObservableObject {
 
         // Validate specific UUID if provided (defense-in-depth)
         if let uuid = specificUUID {
-            let connectedUUIDs = NSScreen.managedScreens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
+            let connectedUUIDs = NSScreen.screens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
             let hasConfig = configurations[uuid] != nil
             guard connectedUUIDs.contains(uuid) || hasConfig else {
                 diagLog.warning("DisplaySettingsManager: Ignoring change for unknown display UUID '\(uuid)'")
@@ -636,7 +642,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func setIceBarLocation(_ location: IceBarLocation, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
             // Update all displays that have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -658,7 +664,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// Sets iceBarLayout for displays based on scope.
     private func setIceBarLayout(_ layout: IceBarLayout, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -680,7 +686,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// Sets gridColumns for displays based on scope.
     private func setGridColumns(_ columns: Int, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -703,7 +709,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func setAlwaysShowHiddenItems(_ value: Bool, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Update all displays that do NOT have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -719,7 +725,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func toggleAlwaysShowHiddenItems(scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Toggle on all displays that do NOT have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -860,7 +866,7 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Returns info about all currently connected displays.
     func connectedDisplays() -> [DisplayInfo] {
-        NSScreen.managedScreens.compactMap { screen in
+        NSScreen.screens.compactMap { screen in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }

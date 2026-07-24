@@ -10,7 +10,7 @@ import Cocoa
 import os.lock
 
 /// A structural representation of a menu bar item.
-struct MenuBarItem: CustomStringConvertible {
+nonisolated struct MenuBarItem: CustomStringConvertible {
     /// The tag associated with this item.
     let tag: MenuBarItemTag
 
@@ -236,7 +236,7 @@ struct MenuBarItem: CustomStringConvertible {
 
 // MARK: - MenuBarItem List
 
-extension MenuBarItem {
+nonisolated extension MenuBarItem {
     /// Options that specify the menu bar items in a list.
     struct ListOption: OptionSet {
         let rawValue: Int
@@ -360,6 +360,41 @@ extension MenuBarItem {
         return items
     }
 
+    /// Scatters the PIDs the service resolved back onto the full window
+    /// list, or returns `nil` when the reply cannot be trusted.
+    ///
+    /// Only the windows that needed resolving are sent to the XPC service,
+    /// so the reply is a dense array indexed against `indices`, not against
+    /// the windows. Lining them back up by position is the whole job, and
+    /// getting it wrong would attribute one app's PID to another's item.
+    ///
+    /// A reply whose length does not match the request is refused outright
+    /// rather than zipped as far as it goes: the misalignment means the
+    /// positional correspondence itself is broken, so every entry is
+    /// suspect, not just the missing tail.
+    ///
+    /// - Parameters:
+    ///   - resolved: PIDs returned by the service, in request order.
+    ///   - indices: Positions in the window list that were sent, in the
+    ///     same order.
+    ///   - windowCount: Total number of windows, including the ones that
+    ///     were never sent.
+    static func scatterSourcePIDs(
+        _ resolved: [pid_t?],
+        toIndices indices: [Int],
+        windowCount: Int
+    ) -> [pid_t?]? {
+        guard resolved.count == indices.count else {
+            return indices.isEmpty ? [pid_t?](repeating: nil, count: windowCount) : nil
+        }
+        var pids = [pid_t?](repeating: nil, count: windowCount)
+        for (resolvedIndex, windowIndex) in indices.enumerated()
+            where pids.indices.contains(windowIndex) {
+            pids[windowIndex] = resolved[resolvedIndex]
+        }
+        return pids
+    }
+
     @available(macOS 26.0, *)
     @MainActor
     private static func getMenuBarItemsExperimental(
@@ -387,7 +422,30 @@ extension MenuBarItem {
                 windows[i].ownerPID == ownPID
         })
 
-        let pids = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows)
+        // Control item windows have a locally-known PID. Their AX children are
+        // disabled divider elements, so asking the XPC service to resolve them
+        // guarantees an unresolved cache miss and can initiate an expensive
+        // scan of every running app's extras menu bar.
+        let indicesToResolve = windows.indices.filter { !controlItemIndices.contains($0) }
+        let resolvedPIDs: [pid_t?] = if indicesToResolve.isEmpty {
+            []
+        } else {
+            await MenuBarItemService.Connection.shared.sourcePIDs(
+                for: indicesToResolve.map { windows[$0] }
+            )
+        }
+
+        let scattered = Self.scatterSourcePIDs(
+            resolvedPIDs,
+            toIndices: indicesToResolve,
+            windowCount: windows.count
+        )
+        if scattered == nil, !indicesToResolve.isEmpty {
+            diagLog.error(
+                "getMenuBarItems: sourcePIDs returned \(resolvedPIDs.count) entries for \(indicesToResolve.count) windows; treating all as unresolved"
+            )
+        }
+        let pids = scattered ?? [pid_t?](repeating: nil, count: windows.count)
 
         var items = windows.enumerated().map { index, window in
             let pid: pid_t? = controlItemIndices.contains(index) ? ownPID : pids[index]
@@ -498,7 +556,7 @@ extension MenuBarItem {
 
 // MARK: - MenuBarItem Init
 
-extension MenuBarItem {
+nonisolated extension MenuBarItem {
     init(tag: MenuBarItemTag, windowID: CGWindowID, ownerPID: pid_t, sourcePID: pid_t?, bounds: CGRect, title: String?, isOnScreen: Bool) {
         self.tag = tag
         self.windowID = windowID
@@ -512,7 +570,7 @@ extension MenuBarItem {
 
 // MARK: MenuBarItem: Equatable
 
-extension MenuBarItem: Equatable {
+nonisolated extension MenuBarItem: Equatable {
     static func == (lhs: MenuBarItem, rhs: MenuBarItem) -> Bool {
         lhs.tag == rhs.tag &&
             lhs.windowID == rhs.windowID &&
@@ -526,7 +584,7 @@ extension MenuBarItem: Equatable {
 
 // MARK: MenuBarItem: Hashable
 
-extension MenuBarItem: Hashable {
+nonisolated extension MenuBarItem: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
         hasher.combine(windowID)
@@ -543,7 +601,7 @@ extension MenuBarItem: Hashable {
 
 // MARK: - MenuBarItemTag Helper
 
-private extension MenuBarItemTag {
+private nonisolated extension MenuBarItemTag {
     /// Creates a tag without checks.
     ///
     /// This initializer does not perform validity checks on its parameters.
@@ -572,7 +630,7 @@ private extension MenuBarItemTag {
 
 // MARK: - MenuBarItemTag.Namespace Helper
 
-extension MenuBarItemTag.Namespace {
+nonisolated extension MenuBarItemTag.Namespace {
     private static let uuidCache = OSAllocatedUnfairLock<[CGWindowID: UUID]>(initialState: [:])
 
     @MainActor

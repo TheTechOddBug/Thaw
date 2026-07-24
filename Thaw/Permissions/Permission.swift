@@ -15,9 +15,24 @@ import SwiftUI
 /// An object that encapsulates the behavior of checking for and requesting
 /// a specific permission for the app.
 @MainActor
-class Permission: ObservableObject, Identifiable {
+@Observable
+class Permission: Identifiable {
     /// A Boolean value that indicates whether the app has this permission.
-    @Published private(set) var hasPermission = false
+    private(set) var hasPermission = false {
+        didSet {
+            // The polling timer reassigns this every few seconds; only an
+            // actual transition should notify the owner.
+            if hasPermission != oldValue {
+                onChange?()
+            }
+        }
+    }
+
+    /// Callback invoked after ``hasPermission`` changes, with the new value
+    /// already stored. Set by owners (e.g. AppPermissions) that need to
+    /// react to updates.
+    @ObservationIgnored
+    var onChange: (() -> Void)?
 
     /// The title of the permission.
     let title: String

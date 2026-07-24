@@ -417,7 +417,12 @@ private struct IceBarContentView: View {
 
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
-        guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return [] }
+        // Zero-width placeholders (not []) during transient zero-height
+        // states: the grid body subscripts columnWidths[colIndex] whenever
+        // rows.count > 1, and an empty array would crash there.
+        guard let maxHeight = itemMaxHeight, maxHeight > 0 else {
+            return Array(repeating: 0, count: gridColumns)
+        }
         let allItems = items
         let rows = stride(from: 0, to: allItems.count, by: gridColumns).map { start in
             Array(allItems[start ..< Swift.min(start + gridColumns, allItems.count)])

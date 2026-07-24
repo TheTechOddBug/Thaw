@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import AsyncAlgorithms
 import Foundation
 
 /// Briefly creates a virtual display when, on a single physical display, menu
@@ -75,10 +76,17 @@ final class VirtualDisplayProvoker {
     /// menu bar item-cache changes (the other trigger) are sparse once the bar
     /// is idle. considerProvoking is cheap and early-returns unless a single
     /// display has an unresolved orphan, so a short interval is inexpensive.
+    /// The 2s evaluation loop; retained so deinit can cancel it instead of
+    /// leaving the timer ticking until the next weak-self check.
+    private var periodicEvaluationTask: Task<Void, Never>?
+
+    deinit {
+        periodicEvaluationTask?.cancel()
+    }
+
     private func startPeriodicEvaluation() {
-        Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+        periodicEvaluationTask = Task { [weak self] in
+            for await _ in AsyncTimerSequence(interval: .seconds(2), clock: .continuous) {
                 guard let self else {
                     return
                 }
