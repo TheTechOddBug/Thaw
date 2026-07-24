@@ -6,14 +6,17 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AXSwift6
 import Cocoa
+import Collections
 import Combine
 // @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are
 // still not Sendable-annotated in the macOS 26/27 SDK, yet are used off the main
 // actor under OSAllocatedUnfairLock for menu-bar event posting. Removing the shim
 // would force @unchecked Sendable wrappers. Drop this once Apple annotates them.
 @preconcurrency import CoreGraphics
+import Observation
 import os.lock
 
 /// Simple actor-based semaphore to prevent overlapping operations
@@ -24,7 +27,7 @@ actor SimpleSemaphore {
     }
 
     private var value: Int
-    private var waiters: [Waiter] = [] // FIFO
+    private var waiters: Deque<Waiter> = [] // FIFO; O(1) popFirst instead of Array's O(n) removeFirst
 
     init(value: Int) {
         precondition(value >= 0, "SimpleSemaphore requires a non-negative value")
@@ -88,9 +91,11 @@ actor SimpleSemaphore {
                 try await Task.sleep(for: timeout)
                 return .timedOut
             }
-            // The first child to finish wins. next()! is safe: the group
-            // always has exactly two children at this point.
-            let first = try await group.next()!
+            // The first child to finish wins. The group always has exactly
+            // two children at this point, so next() must return a value.
+            guard let first = try await group.next() else {
+                preconditionFailure("SimpleSemaphore.wait: task group unexpectedly empty")
+            }
             group.cancelAll()
             if first == .timedOut {
                 // The acquire child may STILL have won the race against
@@ -113,7 +118,9 @@ actor SimpleSemaphore {
                 // Acquired. Drain the cancelled timeout-sleep child and
                 // ignore its error (CancellationError); this preserves
                 // invariant 2.
-                while (try? await group.next()) != nil {}
+                while (try? await group.next()) != nil {
+                    // Intentionally empty: draining the cancelled child, result discarded.
+                }
             }
             return first
         }
@@ -134,8 +141,7 @@ actor SimpleSemaphore {
     /// prior holders had released.
     func signal() {
         value += 1
-        if value <= 0, let waiter = waiters.first {
-            waiters.removeFirst()
+        if value <= 0, let waiter = waiters.popFirst() {
             waiter.continuation.resume(returning: ())
         }
     }
@@ -153,19 +159,20 @@ actor SimpleSemaphore {
 
 /// Manager for menu bar items.
 @MainActor
-final class MenuBarItemManager: ObservableObject {
-    static let layoutWatchdogTimeout: DispatchTimeInterval = .seconds(6)
+@Observable
+final class MenuBarItemManager {
+    static let layoutWatchdogTimeout: Duration = .seconds(6)
 
     /// Delay between relocation/restore moves and the subsequent recache,
     /// giving macOS time to settle menu bar item positions.
     static let uiSettleDelay: Duration = .milliseconds(300)
 
     /// The current cache of menu bar items.
-    @Published private(set) var itemCache = ItemCache(displayID: nil)
+    private(set) var itemCache = ItemCache(displayID: nil)
 
     /// A Boolean value that indicates whether the control items for the
     /// hidden sections are missing from the menu bar.
-    @Published private(set) var areControlItemsMissing = false
+    private(set) var areControlItemsMissing = false
 
     /// Number of consecutive `ControlItemPair` lookup failures seen by
     /// `cacheItemsRegardless`. Reset to zero on the first successful lookup.
@@ -204,8 +211,8 @@ final class MenuBarItemManager: ObservableObject {
     private var temporarilyShownItemContexts = [TemporarilyShownItemContext]()
 
     /// A timer for rehiding temporarily shown menu bar items.
-    private nonisolated(unsafe) var rehideTimer: Timer?
-    private nonisolated(unsafe) var rehideCancellable: AnyCancellable?
+    private var rehideTimer: Timer?
+    private var rehideCancellable: AnyCancellable?
 
     /// Timestamp of the most recent menu bar item move operation.
     private var lastMoveOperationTimestamp: ContinuousClock.Instant?
@@ -221,6 +228,9 @@ final class MenuBarItemManager: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appState.navigationState`'s @Observable properties (wave 3).
+    private var navigationStateObservationTask: Task<Void, Never>?
+
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
     private var menuOpenCheckTask: Task<Bool, Never>?
@@ -230,13 +240,14 @@ final class MenuBarItemManager: ObservableObject {
     private var menuOpenCheckCachedAt: ContinuousClock.Instant?
 
     /// Timer for lightweight periodic cache checks.
-    private nonisolated(unsafe) var cacheTickCancellable: AnyCancellable?
+    private var cacheTickCancellable: AnyCancellable?
 
     /// Persisted identifiers of menu bar items we've already seen.
     private var knownItemIdentifiers = Set<String>()
     /// Suppresses the next automatic relocation of newly seen leftmost items.
     private var suppressNextNewLeftmostItemRelocation = false
 
+    @MainActor
     deinit {
         rehideTimer?.invalidate()
         rehideCancellable?.cancel()
@@ -383,6 +394,36 @@ final class MenuBarItemManager: ObservableObject {
     /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
     private var pendingDivergenceObservedAt: ContinuousClock.Instant?
 
+    /// Per-item move-failure history for the bulk-apply loops, keyed by
+    /// `uniqueIdentifier`. A failed move records an entry; a successful
+    /// move clears it. Items under backoff are skipped by the next apply
+    /// so one persistently unmovable item (a vanished transient Control
+    /// Center window, an item whose app hangs) can't re-trigger a full
+    /// cursor-hijacking apply loop every cache cycle (#736).
+    private var moveFailureHistory = [String: (count: Int, lastFailure: ContinuousClock.Instant)]()
+
+    /// How long a failed item stays excluded from bulk-apply moves.
+    /// Grows linearly with consecutive failures, capped at 5 minutes.
+    nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
+        .seconds(min(30 * max(failureCount, 1), 300))
+    }
+
+    /// Whether the bulk-apply loops should skip moving the given item
+    /// because it failed recently and is still inside its backoff window.
+    private func isUnderMoveFailureBackoff(_ uid: String, now: ContinuousClock.Instant = .now) -> Bool {
+        guard let entry = moveFailureHistory[uid] else { return false }
+        return now - entry.lastFailure < Self.moveFailureBackoffInterval(failureCount: entry.count)
+    }
+
+    private func recordMoveFailure(_ uid: String, now: ContinuousClock.Instant = .now) {
+        let count = (moveFailureHistory[uid]?.count ?? 0) + 1
+        moveFailureHistory[uid] = (count: count, lastFailure: now)
+    }
+
+    private func recordMoveSuccess(_ uid: String) {
+        moveFailureHistory.removeValue(forKey: uid)
+    }
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -406,7 +447,7 @@ final class MenuBarItemManager: ObservableObject {
     /// apply restores them, or when the user moves them to another section.
     private var notchOverflowEjectedUIDs = Set<String>()
     /// Placement preference for newly detected menu bar items.
-    @Published private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
+    private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
 
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
@@ -471,7 +512,7 @@ final class MenuBarItemManager: ObservableObject {
         }
     }
 
-    struct NewItemsPlacement: Codable, Equatable {
+    nonisolated struct NewItemsPlacement: Codable, Equatable {
         enum Relation: String, Codable {
             case leftOfAnchor
             case rightOfAnchor
@@ -616,7 +657,15 @@ final class MenuBarItemManager: ObservableObject {
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
-                guard !item.isTransientControlCenterItem else { continue }
+                // isTransientControlCenterItem requires a resolved sourcePID,
+                // so also exclude CC-generic (`Item-N`) items whose sourcePID
+                // is nil: those are either the same transient windows caught
+                // before resolution, or third-party items degraded to
+                // ambiguous CC identifiers by an XPC resolution failure
+                // (#784) — neither is a stable identity worth persisting.
+                guard !item.isTransientControlCenterItem,
+                      !(item.tag.isControlCenterGenericItem && item.sourcePID == nil)
+                else { continue }
                 allCurrentIdentifiers.insert(item.uniqueIdentifier)
             }
         }
@@ -628,6 +677,7 @@ final class MenuBarItemManager: ObservableObject {
                 .filter {
                     isPersistable($0) &&
                         !$0.isTransientControlCenterItem &&
+                        !($0.tag.isControlCenterGenericItem && $0.sourcePID == nil) &&
                         !pendingRehideTagIDs.contains($0.tag.tagIdentifier) &&
                         !ejectedStillInHidden.contains($0.uniqueIdentifier)
                 }
@@ -661,6 +711,18 @@ final class MenuBarItemManager: ObservableObject {
     /// look like?" question has a single answer used by both periodic
     /// save and profile capture.
     private func saveSectionOrder(from cache: ItemCache) {
+        // Never persist an order computed from a degraded snapshot: when
+        // XPC sourcePID resolution fails, third-party items collapse into
+        // ambiguous Control-Center identifiers, and writing that snapshot
+        // would poison the saved layout every apply matches against (#784).
+        let managedItems = cache.managedItems
+        let unresolvedCount = managedItems.filter { $0.sourcePID == nil }.count
+        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedCount, itemCount: managedItems.count) {
+            MenuBarItemManager.diagLog.info(
+                "saveSectionOrder: skipping, \(unresolvedCount)/\(managedItems.count) items have unresolved sourcePIDs"
+            )
+            return
+        }
         let newOrder = computeSectionOrder(from: cache)
         guard newOrder != savedSectionOrder else { return }
         savedSectionOrder = newOrder
@@ -1373,10 +1435,11 @@ final class MenuBarItemManager: ObservableObject {
                 // new window IDs and relocateNewLeftmostItems no-ops. Re-check
                 // at +2.5s and +5s to catch late arrivals; cacheItemsIfNeeded
                 // bails when window IDs are unchanged, so this is cheap when
-                // the item already showed up on the first pass.
-                try await Task.sleep(for: .seconds(2.5))
+                // the item already showed up on the first pass. A cancelled
+                // sleep skips the remaining re-checks.
+                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
-                try await Task.sleep(for: .seconds(2.5))
+                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
             }
         }
@@ -1410,35 +1473,24 @@ final class MenuBarItemManager: ObservableObject {
         }
         .store(in: &c)
 
-        appState.navigationState.$settingsNavigationIdentifier
-            .sink { [weak self] identifier in
-                guard let self, identifier == .menuBarLayout else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+        // `navigationState` (AppNavigationState) is @Observable (wave 3), so
+        // its old `$settingsNavigationIdentifier`/`$isSettingsPresented`
+        // Combine projections are gone. Both old subscribers wanted the same
+        // outcome (refresh the image cache once Menu Bar Layout becomes the
+        // presented settings pane), just triggered from two different edges
+        // (identifier changing while already presented, vs. presented
+        // becoming true while identifier is already .menuBarLayout), so they
+        // are combined into a single Observations-Task tracking both.
+        navigationStateObservationTask = Task { [weak self] in
+            guard let self, let appState = self.appState else { return }
+            let changes = Observations { [navigationState = appState.navigationState] in
+                (navigationState.settingsNavigationIdentifier, navigationState.isSettingsPresented)
             }
-            .store(in: &c)
-
-        // When Settings reopens with Menu Bar Layout already selected,
-        // settingsNavigationIdentifier does not change, so the subscriber
-        // above does not fire. Observe isSettingsPresented to catch this case.
-        appState.navigationState.$isSettingsPresented
-            .removeDuplicates()
-            .sink { [weak self] isPresented in
-                guard
-                    let self,
-                    isPresented,
-                    appState.navigationState.settingsNavigationIdentifier == .menuBarLayout
-                else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+            for await (identifier, isPresented) in changes {
+                guard isPresented, identifier == .menuBarLayout else { continue }
+                await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
             }
-            .store(in: &c)
+        }
 
         // Rescan on menu bar window-list changes. cacheItemsIfNeeded compares
         // the current items-only window IDs against the cached set and recaches
@@ -1523,6 +1575,14 @@ extension MenuBarItemManager {
         /// doesn't read as a layout change and trigger a recache.
         private(set) var cachedCloneWindowIDs = Set<CGWindowID>()
 
+        /// Window identifiers of Control-Center-generic (`Item-N`) items seen
+        /// in the most recent cache cycle. These windows churn — Live
+        /// Activities and other transient Control Center widgets appear,
+        /// vanish, and get new windowIDs while the visible item count stays
+        /// stable — so applySavedLayout's windowID-change gate ignores their
+        /// disappearance instead of dispatching a full bulk apply (#736).
+        private(set) var cachedControlCenterGenericWindowIDs = Set<CGWindowID>()
+
         /// Runs the given async closure as a task and waits for it to
         /// complete before returning.
         ///
@@ -1545,6 +1605,11 @@ extension MenuBarItemManager {
             cachedCloneWindowIDs = ids
         }
 
+        /// Updates the set of cached Control-Center-generic window identifiers.
+        func updateCachedControlCenterGenericWindowIDs(_ ids: Set<CGWindowID>) {
+            cachedControlCenterGenericWindowIDs = ids
+        }
+
         /// Updates the mapping from window identifiers to source process identifiers.
         func updateCachedItemPIDs(_ pids: [CGWindowID: pid_t]) {
             cachedItemPIDs = pids
@@ -1559,6 +1624,7 @@ extension MenuBarItemManager {
             // a recycled windowID out of its comparison before the recache
             // that follows this reset repopulates the set.
             cachedCloneWindowIDs.removeAll()
+            cachedControlCenterGenericWindowIDs.removeAll()
         }
     }
 
@@ -1650,15 +1716,21 @@ extension MenuBarItemManager {
     /// A pair of control items, taken from a list of menu bar items
     /// during a menu bar item cache operation.
     struct ControlItemPair {
-        let hidden: MenuBarItem
-        let alwaysHidden: MenuBarItem?
+        nonisolated let hidden: MenuBarItem
+        nonisolated let alwaysHidden: MenuBarItem?
 
         /// Creates a control item pair from already-known control items.
         ///
         /// Used by test fixtures and by callers that have already resolved the
         /// hidden and always-hidden items themselves. Production discovery from
         /// a live menu bar uses the failable initializer below.
-        init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
+        ///
+        /// Marked `nonisolated` so test fixtures (compiled without the app
+        /// target's MainActor default) and other non-MainActor callers can
+        /// construct a pair from already-resolved items without a hop; the
+        /// failable `init?` below stays implicitly `@MainActor` since it
+        /// performs AX-frame correlation.
+        nonisolated init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
             self.hidden = hidden
             self.alwaysHidden = alwaysHidden
         }
@@ -1796,7 +1868,9 @@ extension MenuBarItemManager {
             for idx in sortedIndices {
                 removed[idx] = items.remove(at: idx)
             }
-            let hidden = removed[hiddenIdx]!
+            guard let hidden = removed[hiddenIdx] else {
+                return nil
+            }
             let alwaysHidden = matchedIndices.count > 1 ? removed[matchedIndices[1]] : nil
 
             MenuBarItemManager.diagLog.info(
@@ -2215,6 +2289,7 @@ extension MenuBarItemManager {
         defer { Task { await cacheGate.end() } }
 
         let previousWindowIDs = cacheActor.cachedItemWindowIDs
+        let previousCCGenericWindowIDs = cacheActor.cachedControlCenterGenericWindowIDs
         let displayID = Bridging.getActiveMenuBarDisplayID()
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: displayID=\(displayID.map { "\($0)" } ?? "nil"), previousWindowIDs count=\(previousWindowIDs.count)")
 
@@ -2404,6 +2479,9 @@ extension MenuBarItemManager {
         controlItemLookupFailureStreak = 0
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
         cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
+        cacheActor.updateCachedControlCenterGenericWindowIDs(
+            Set(items.filter { $0.tag.isControlCenterGenericItem }.map(\.windowID))
+        )
 
         await MainActor.run {
             self.areControlItemsMissing = false
@@ -2590,7 +2668,8 @@ extension MenuBarItemManager {
                 previousWindowIDs: previousWindowIDs,
                 controlItems: controlItems,
                 previousDisplayID: itemCache.displayID,
-                currentDisplayID: displayID
+                currentDisplayID: displayID,
+                previousCCGenericWindowIDs: previousCCGenericWindowIDs
             )
             if didApplySavedLayout {
                 backgroundCacheContinuation?.resume()
@@ -2691,6 +2770,14 @@ extension MenuBarItemManager {
         /// A menu bar item's menu is tracking (e.g. the Wi-Fi picker or an
         /// input method panel is open) and the move was deferred.
         case menuTrackingActive(MenuBarItem)
+        /// A menu bar item's owning process is alive but not pumping its
+        /// event loop, so it cannot acknowledge synthetic move events.
+        case ownerUnresponsive(MenuBarItem)
+        /// A synthetic event came back through the session tap carrying a
+        /// different window than the one it was addressed to, meaning the
+        /// window server re-resolved it against whatever sits under the
+        /// clamped cursor position.
+        case eventWindowMismatch(MenuBarItem)
 
         var description: String {
             switch self {
@@ -2712,6 +2799,10 @@ extension MenuBarItemManager {
                 "\(Self.self).missingItemBounds(item: \(item.tag))"
             case let .menuTrackingActive(item):
                 "\(Self.self).menuTrackingActive(item: \(item.tag))"
+            case let .ownerUnresponsive(item):
+                "\(Self.self).ownerUnresponsive(item: \(item.tag))"
+            case let .eventWindowMismatch(item):
+                "\(Self.self).eventWindowMismatch(item: \(item.tag))"
             }
         }
 
@@ -2735,6 +2826,10 @@ extension MenuBarItemManager {
                 "Missing bounds rectangle for \"\(item.displayName)\""
             case let .menuTrackingActive(item):
                 "A menu bar item's menu was open while moving \"\(item.displayName)\""
+            case let .ownerUnresponsive(item):
+                "\"\(item.displayName)\" is not responding and cannot be moved"
+            case let .eventWindowMismatch(item):
+                "A move event for \"\(item.displayName)\" was delivered to the wrong window"
             }
         }
 
@@ -2895,8 +2990,9 @@ extension MenuBarItemManager {
         holder.withLock { $0 }
     }
 
-    private struct EventContinuationContext {
+    private nonisolated struct EventContinuationContext {
         let event: CGEvent
+        let item: MenuBarItem
         let pid: pid_t
         let entryEvent: CGEvent
         let exitEvent: CGEvent
@@ -2904,14 +3000,14 @@ extension MenuBarItemManager {
         let secondLocation: EventTap.Location
     }
 
-    private struct EventContinuationState {
+    private nonisolated struct EventContinuationState {
         let countHolder: OSAllocatedUnfairLock<Int>
         let didResume: OSAllocatedUnfairLock<Bool>
         let continuationHolder: OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>
         let innerTaskHolder: OSAllocatedUnfairLock<Task<Void, Never>?>
     }
 
-    private enum EventContinuationKind {
+    private nonisolated enum EventContinuationKind {
         case postEventBarrier
         case scromble
     }
@@ -2944,6 +3040,69 @@ extension MenuBarItemManager {
         if state.didResume.tryClaimOnce() {
             continuation.resume(throwing: CancellationError())
         }
+    }
+
+    /// Resumes the stored continuation by throwing `error`, if no other
+    /// path has resumed it yet. Used to fail an in-flight event operation
+    /// early instead of waiting out its timeout.
+    private nonisolated func resumeFailureIfNeeded(
+        state: EventContinuationState,
+        error: any Error
+    ) {
+        let continuation = currentContinuation(from: state.continuationHolder)
+        if let continuation, state.didResume.tryClaimOnce() {
+            continuation.resume(throwing: error)
+        }
+    }
+
+    /// Returns whether `rEvent` is a stray echo of this operation's own
+    /// event: it carries the same `eventSourceUserData` — unique per posted
+    /// event, so a positive identification — but its window fields no longer
+    /// match the ones it was posted with.
+    ///
+    /// The window server re-resolves
+    /// `mouseEventWindowUnderMousePointer*` against whatever actually sits
+    /// under the cursor. For an item parked off the left edge, the posted
+    /// coordinates get clamped to the display's leftmost edge — under the
+    /// Apple menu — and the event comes back bound to that window instead.
+    /// Left in the stream it is delivered there, which is what surfaces as a
+    /// stray click at the top-left of the screen.
+    private nonisolated func isStrayEcho(
+        of rEvent: CGEvent,
+        context: EventContinuationContext
+    ) -> Bool {
+        guard rEvent.matches(context.event, byIntegerFields: [.eventSourceUserData]) else {
+            return false
+        }
+        return !rEvent.matches(context.event, byIntegerFields: CGEventField.menuBarItemEventFields)
+    }
+
+    /// Whether stray echoes of our own move events are dropped from the
+    /// session stream before they can be delivered against the wrong window.
+    ///
+    /// On by default; this only ever discards events that are already
+    /// misdirected — an echo whose window fields still match is passed
+    /// through untouched, so the scromble handshake is unaffected. Kill
+    /// switch, should it ever misfire:
+    ///   defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
+    private nonisolated var discardsStrayMoveEvents: Bool {
+        UserDefaults.standard.object(forKey: "discardStrayMoveEvents") as? Bool ?? true
+    }
+
+    /// Whether a synthetic event that comes back addressed to a different
+    /// window than it was posted with should fail its operation immediately
+    /// rather than let it run to timeout.
+    ///
+    /// The mismatch is always logged; only the early failure is gated. The
+    /// window server re-resolves the `mouseEventWindowUnderMousePointer*`
+    /// fields against whatever actually sits under the cursor, so a mismatch
+    /// is the signature of a move whose coordinates were clamped — the
+    /// top-left/Apple-menu case for items parked off the left edge. Whether
+    /// that is *always* unrecoverable is unverified on real hardware, hence
+    /// the opt-in. Enable with:
+    ///   defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
+    private nonisolated var failsFastOnEventWindowMismatch: Bool {
+        UserDefaults.standard.bool(forKey: "failFastOnEventWindowMismatch")
     }
 
     private nonisolated func makeContinuationTask(
@@ -2984,6 +3143,7 @@ extension MenuBarItemManager {
         location: EventTap.Location,
         placement: CGEventTapPlacement,
         context: EventContinuationContext,
+        onMismatch: ((CGEvent) -> Void)? = nil,
         onMatch: @escaping (EventTap) -> Void
     ) -> EventTap {
         makeEventTap(
@@ -2994,6 +3154,15 @@ extension MenuBarItemManager {
             option: .listenOnly
         ) { tap, rEvent in
             guard rEvent.matches(context.event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                // `eventSourceUserData` is unique per posted event (see
+                // `setUserData`), so matching on it alone positively
+                // identifies this operation's own event. Getting here with
+                // that field equal means the event came back with the window
+                // fields rewritten — it was delivered against a different
+                // window than the one it addressed.
+                if rEvent.matches(context.event, byIntegerFields: [.eventSourceUserData]) {
+                    onMismatch?(rEvent)
+                }
                 return rEvent
             }
             onMatch(tap)
@@ -3042,23 +3211,41 @@ extension MenuBarItemManager {
             label: "EventTap 2",
             location: context.secondLocation,
             placement: .tailAppendEventTap,
-            context: context
-        ) { tap in
-            switch kind {
-            case .postEventBarrier:
-                if self.currentCount(from: state.countHolder) <= 0 {
-                    tap.disable()
-                    context.exitEvent.post(to: context.firstLocation)
-                } else {
-                    context.entryEvent.post(to: context.firstLocation)
+            context: context,
+            onMismatch: { [weak self] rEvent in
+                guard let self else { return }
+                let expected = context.event.getIntegerValueField(.mouseEventWindowUnderMousePointer)
+                let got = rEvent.getIntegerValueField(.mouseEventWindowUnderMousePointer)
+                MenuBarItemManager.diagLog.warning(
+                    """
+                    Event for \(context.item.logString) came back on the wrong window \
+                    (got \(got), expected \(expected)) at \(String(describing: rEvent.location))
+                    """
+                )
+                if failsFastOnEventWindowMismatch {
+                    resumeFailureIfNeeded(
+                        state: state,
+                        error: EventError.eventWindowMismatch(context.item)
+                    )
                 }
-            case .scromble:
-                if self.currentCount(from: state.countHolder) <= 0 {
-                    tap.disable()
+            },
+            onMatch: { tap in
+                switch kind {
+                case .postEventBarrier:
+                    if self.currentCount(from: state.countHolder) <= 0 {
+                        tap.disable()
+                        context.exitEvent.post(to: context.firstLocation)
+                    } else {
+                        context.entryEvent.post(to: context.firstLocation)
+                    }
+                case .scromble:
+                    if self.currentCount(from: state.countHolder) <= 0 {
+                        tap.disable()
+                    }
+                    context.event.post(to: context.firstLocation)
                 }
-                context.event.post(to: context.firstLocation)
             }
-        }
+        )
     }
 
     private nonisolated func makeFirstLocationRelayEventTap(
@@ -3080,24 +3267,61 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Creates a tap that removes stray echoes of this operation's own event
+    /// from the session stream, so they cannot be delivered against the
+    /// window the window server re-bound them to.
+    ///
+    /// Head-inserted and non-listen-only, so it runs before the tail-appended
+    /// handshake taps and can actually drop the event. This is safe with
+    /// respect to that handshake: those taps only act on echoes whose window
+    /// fields still match, and such echoes are passed through here untouched.
+    private nonisolated func makeStrayEventDiscardTap(
+        context: EventContinuationContext
+    ) -> EventTap {
+        makeEventTap(
+            label: "Stray move event discard",
+            type: context.event.type,
+            location: context.secondLocation,
+            placement: .headInsertEventTap,
+            option: .defaultTap
+        ) { _, rEvent in
+            guard self.isStrayEcho(of: rEvent, context: context) else {
+                return rEvent
+            }
+            MenuBarItemManager.diagLog.debug(
+                """
+                Discarding stray echo of \(context.item.logString) move event \
+                at \(String(describing: rEvent.location))
+                """
+            )
+            return nil
+        }
+    }
+
     private nonisolated func makeContinuationEventTaps(
         kind: EventContinuationKind,
         context: EventContinuationContext,
         state: EventContinuationState,
         continuation: CheckedContinuation<Void, any Error>
     ) -> [EventTap] {
-        var eventTaps = [
-            makeEntryEventTap(
-                context: context,
-                state: state,
-                continuation: continuation
-            ),
-            makeSecondLocationEventTap(
-                kind: kind,
-                context: context,
-                state: state
-            ),
-        ]
+        var eventTaps = [EventTap]()
+        if discardsStrayMoveEvents {
+            eventTaps.append(makeStrayEventDiscardTap(context: context))
+        }
+        eventTaps.append(
+            contentsOf: [
+                makeEntryEventTap(
+                    context: context,
+                    state: state,
+                    continuation: continuation
+                ),
+                makeSecondLocationEventTap(
+                    kind: kind,
+                    context: context,
+                    state: state
+                ),
+            ]
+        )
         if kind == EventContinuationKind.scromble {
             eventTaps.append(
                 makeFirstLocationRelayEventTap(
@@ -3170,6 +3394,7 @@ extension MenuBarItemManager {
         let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
         let continuationContext = EventContinuationContext(
             event: event,
+            item: item,
             pid: pid,
             entryEvent: entryEvent,
             exitEvent: exitEvent,
@@ -3211,6 +3436,11 @@ extension MenuBarItemManager {
             try await timeoutTask.value
         } catch is TaskTimeoutError {
             throw EventError.eventOperationTimeout(item)
+        } catch let error as EventError {
+            // Preserve failures raised from inside the continuation (e.g. a
+            // window mismatch) so callers can tell them apart from a generic
+            // failure and skip pointless retries.
+            throw error
         } catch {
             throw EventError.cannotComplete
         }
@@ -3275,7 +3505,7 @@ extension MenuBarItemManager {
 
 extension MenuBarItemManager {
     /// Destinations for menu bar item move operations.
-    enum MoveDestination: Equatable {
+    nonisolated enum MoveDestination: Equatable {
         /// The destination to the left of the given target item.
         case leftOfItem(MenuBarItem)
         /// The destination to the right of the given target item.
@@ -3534,8 +3764,24 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
 
+        // A process that is alive but not pumping its event loop never
+        // acknowledges the synthetic move, so every scrombleEvent below runs
+        // to its timeout and burns the full 3.5 s semaphore budget — with the
+        // semaphore held, that stalls every *other* item's move behind it.
+        // Little Snitch is the recurring case (it ships with GUI Scripting
+        // disabled), but this catches any hung owner. Bail out immediately
+        // instead; the caller's retry/backoff path picks the item up again
+        // once its owner starts responding.
+        if Bridging.isProcessUnresponsive(eventPID) {
+            MenuBarItemManager.diagLog.warning(
+                "postMoveEvents: target PID \(eventPID) for \(item.logString) is unresponsive; skipping move"
+            )
+            throw EventError.ownerUnresponsive(item)
+        }
+
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
+
         // Capture mouse location only when this call owns the cursor warp.
         // When called from move(), the outer move() handles the single warp
         // at the end of all attempts so the cursor doesn't oscillate per attempt.
@@ -3773,7 +4019,7 @@ extension MenuBarItemManager {
 
     /// The outcome to take when a hidden-section drag's move throws after
     /// the drag handler's resample-and-verify pass.
-    enum HiddenDragFailureAction: Equatable {
+    nonisolated enum HiddenDragFailureAction: Equatable {
         /// The item actually reached its intended position; the throw was a
         /// false alarm from verification racing macOS's own settle. No
         /// alert needed.
@@ -3819,7 +4065,7 @@ extension MenuBarItemManager {
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
         skipInputPause: Bool = false,
-        watchdogTimeout: DispatchTimeInterval? = nil,
+        watchdogTimeout: Duration? = nil,
         maxMoveAttempts: Int = 8
     ) async throws {
         // System clone windows are transient WindowServer duplicates that
@@ -3965,6 +4211,29 @@ extension MenuBarItemManager {
                     continue
                 }
             } catch {
+                // missingItemBounds is definitive: getCurrentBounds already
+                // refreshed the on-screen items and re-matched by tag before
+                // throwing, so the item's window is genuinely gone (transient
+                // Control Center item vanished, owning app quit). Retrying
+                // just warps the hidden cursor into the menu bar once per
+                // remaining attempt for an item that cannot be moved (#736).
+                if case EventError.missingItemBounds = error {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) no longer reports bounds, aborting move"
+                    )
+                    throw error
+                }
+                // Also definitive for the duration of this call: a hung owner
+                // will not start pumping its event loop within the few hundred
+                // milliseconds between attempts, so the remaining attempts
+                // would only re-pay the semaphore wait. Callers retry the item
+                // on a later cache tick, by which point it may have recovered.
+                if case EventError.ownerUnresponsive = error {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
+                    )
+                    throw error
+                }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
                 if n < maxAttempts {
                     try await waitForMoveOperationBuffer()
@@ -5594,14 +5863,14 @@ extension MenuBarItemManager {
 
     private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
         let pids = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows)
-        return Set(pids.compactMap(\.self))
+        return Set(pids.compacted())
     }
 }
 
 // MARK: - MenuBarItemEventType
 
 /// Event types for menu bar item events.
-private enum MenuBarItemEventType {
+private nonisolated enum MenuBarItemEventType {
     /// The event type for moving a menu bar item.
     case move(MoveSubtype)
     /// The event type for clicking a menu bar item.
@@ -5914,9 +6183,11 @@ extension MenuBarItemManager {
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
 
-        await MainActor.run {
-            appState.objectWillChange.send()
-        }
+        // `appState` is now `@Observable` (wave 4), so the manual
+        // `objectWillChange.send()` poke that used to force views bound to
+        // `appState` to refresh after the async `imageCache` mutations above
+        // is no longer needed: Observation tracks each mutated property
+        // (`imageCache`'s own storage) directly, independent of this poke.
 
         // Clear any stale -1 sentinel that may have been written into
         // menuBarHeightCache while the Menubar window was transiently
@@ -6216,7 +6487,9 @@ extension MenuBarItemManager {
             guard let appState = self.appState else { return }
             appState.imageCache.performCacheCleanup()
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-            await MainActor.run { appState.objectWillChange.send() }
+            // `appState` is now `@Observable` (wave 4); Observation tracks
+            // the `imageCache` mutations above directly, so the manual
+            // `objectWillChange.send()` poke is no longer needed.
         }
     }
 
@@ -6770,14 +7043,26 @@ extension MenuBarItemManager {
                     break
                 }
 
+                // Control items are the section anchors of the full sort —
+                // skipping one would misplace everything after it, so they
+                // are exempt from failure backoff.
+                if !isControlUID, isUnderMoveFailureBackoff(uid) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout (full sort): \(uid) under move-failure backoff, skipping"
+                    )
+                    continue
+                }
+
                 let dest: MoveDestination = .leftOfItem(cc)
                 MenuBarItemManager.diagLog.debug("Profile layout (full sort): \(uid) → .leftOfItem(CC)")
 
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
+                    recordMoveSuccess(uid)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
+                    recordMoveFailure(uid)
                     MenuBarItemManager.diagLog.error("Profile layout (full sort): failed \(uid): \(error)")
                 }
             }
@@ -7106,6 +7391,13 @@ extension MenuBarItemManager {
             for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
 
+                if isUnderMoveFailureBackoff(planned.uid) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: \(planned.uid) under move-failure backoff, skipping"
+                    )
+                    continue
+                }
+
                 let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 var freshItemsCopy = allFreshItems
                 guard let freshControl = ControlItemPair(
@@ -7138,8 +7430,10 @@ extension MenuBarItemManager {
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
+                    recordMoveSuccess(planned.uid)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
+                    recordMoveFailure(planned.uid)
                     MenuBarItemManager.diagLog.error(
                         "Profile layout: failed to move \(planned.uid): \(error)"
                     )
@@ -7350,7 +7644,6 @@ extension MenuBarItemManager {
         return !previous.isSubset(of: current)
     }
 
-
     /// Whether enough menu bar items are missing a resolved source PID that
     /// bulk-applying the saved layout would act on unmatchable identities.
     ///
@@ -7417,7 +7710,8 @@ extension MenuBarItemManager {
         previousWindowIDs: [CGWindowID],
         controlItems: ControlItemPair,
         previousDisplayID: CGDirectDisplayID? = nil,
-        currentDisplayID: CGDirectDisplayID? = nil
+        currentDisplayID: CGDirectDisplayID? = nil,
+        previousCCGenericWindowIDs: Set<CGWindowID> = []
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -7483,8 +7777,15 @@ extension MenuBarItemManager {
         // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
+        // Control-Center-generic (`Item-N`) windows churn windowIDs while
+        // the visible item count stays stable (Live Activities, transient
+        // CC widgets). Their disappearance is not an app quit/relaunch and
+        // must not dispatch a bulk apply, or every churn cycle replays the
+        // whole layout and hijacks the cursor (#736). Their identities are
+        // never part of a saved layout (saveSectionOrder excludes them), so
+        // ignoring them here can't miss a restorable change.
         let windowIDsChanged = Self.windowIDsChanged(
-            previous: previousWindowIDSet,
+            previous: previousWindowIDSet.subtracting(previousCCGenericWindowIDs),
             current: currentWindowIDSet,
             previousDisplayID: previousDisplayID,
             currentDisplayID: currentDisplayID
@@ -7665,7 +7966,7 @@ extension MenuBarItemManager {
 
 // MARK: - CGEventField Helpers
 
-private extension CGEventField {
+private nonisolated extension CGEventField {
     /// Key to access a field that contains the event's window identifier.
     static let windowID = CGEventField(rawValue: 0x33)! // swiftlint:disable:this force_unwrapping
 
@@ -7680,7 +7981,7 @@ private extension CGEventField {
 
 // MARK: - CGEventFilterMask Helpers
 
-private extension CGEventFilterMask {
+private nonisolated extension CGEventFilterMask {
     /// Specifies that all events should be permitted during event suppression states.
     static let permitAllEvents: CGEventFilterMask = [
         .permitLocalMouseEvents,
@@ -7691,7 +7992,7 @@ private extension CGEventFilterMask {
 
 // MARK: - CGEventType Helpers
 
-private extension CGEventType {
+private nonisolated extension CGEventType {
     /// A string to use for logging purposes.
     var logString: String {
         switch self {
@@ -7721,7 +8022,7 @@ private extension CGEventType {
 
 // MARK: - CGMouseButton Helpers
 
-private extension CGMouseButton {
+private nonisolated extension CGMouseButton {
     /// A string to use for logging purposes.
     var logString: String {
         switch self {
@@ -7735,7 +8036,7 @@ private extension CGMouseButton {
 
 // MARK: - Duration Helpers
 
-private extension Duration {
+private nonisolated extension Duration {
     /// Returns the duration in milliseconds as a Double.
     var milliseconds: Double {
         let (seconds, attoseconds) = components
@@ -7745,7 +8046,7 @@ private extension Duration {
 
 // MARK: - CGEvent Helpers
 
-private extension CGEvent {
+private nonisolated extension CGEvent {
     /// Returns an event that can be sent to a menu bar item.
     ///
     /// - Parameters:
@@ -7830,6 +8131,12 @@ private extension CGEvent {
         setIntegerValueField(.eventSourceUserData, value: userData)
     }
 
+    /// Stamps the target window onto the event.
+    ///
+    /// Move events additionally stamp the raw 0x33 `windowID` field. This was
+    /// A/B tested against external reports that the field can make WindowServer
+    /// discard event locations on pid-routed events; on real hardware moves are
+    /// more reliable with it, so it is unconditional.
     private func setWindowID(_ windowID: CGWindowID, for type: MenuBarItemEventType) {
         let windowID = Int64(windowID)
 
