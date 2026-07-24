@@ -323,6 +323,18 @@ final class MenuBarItemManager: ObservableObject {
     /// false re-sort triggers during an in-flight sort.
     private(set) var isApplyingProfileLayout = false
 
+    /// True while `applyProfileLayout` is actively issuing the move
+    /// sequence (Phase 6). Lets `postMoveEvents` skip redundant
+    /// per-item cursor hide/show churn — the cursor is already held
+    /// hidden for the whole sequence, and is restored once at Phase 7.
+    private var isBulkApplyInProgress = false
+
+    /// Timestamp of the first observation of a diverged layout that has
+    /// not yet been confirmed by a second consecutive observation. `nil`
+    /// when no divergence is currently pending confirmation. See
+    /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
+    private var pendingDivergenceObservedAt: ContinuousClock.Instant?
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -3337,9 +3349,21 @@ extension MenuBarItemManager {
             CGDisplayBounds($0.displayID).contains(warpPoint)
         }
         if warpIsOnScreen {
+            // Load-bearing for event delivery — keep unconditionally, even
+            // during a bulk apply: the receiving app's tracking needs the
+            // cursor at the target location regardless of its visibility.
             MouseHelpers.warpCursor(to: warpPoint)
         }
-        MouseHelpers.hideCursor()
+        // During a bulk apply (applyProfileLayout's move sequence) the
+        // cursor is already held hidden for the whole sequence and
+        // restored once at its end (Phase 7). Hiding/showing again per
+        // item here is redundant churn and, if the outer hide's refcount
+        // is ever force-reset by its watchdog mid-sequence, is what turns
+        // into the cursor visibly "yanked" across every remaining item's
+        // move (#723). Skip it and rely on the sequence-level hide.
+        if !isBulkApplyInProgress {
+            MouseHelpers.hideCursor()
+        }
         if warpIsOnScreen {
             await eventSleep(for: .milliseconds(20))
         }
@@ -3370,7 +3394,12 @@ extension MenuBarItemManager {
             if let mouseLocation {
                 MouseHelpers.warpCursor(to: mouseLocation)
             }
-            MouseHelpers.showCursor()
+            // Mirrors the skipped hideCursor() above: during a bulk apply
+            // the sequence-level restoration (applyProfileLayout Phase 7)
+            // owns showing the cursor once, at the end.
+            if !isBulkApplyInProgress {
+                MouseHelpers.showCursor()
+            }
             lastMoveOperationTimestamp = .now
             updateMoveOperationTimeout(timeout, for: item)
         }
@@ -6370,6 +6399,13 @@ extension MenuBarItemManager {
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
         defer { MouseHelpers.showCursor() }
 
+        // Spans the whole move sequence below (Phase 6). Lets
+        // postMoveEvents skip its own per-item hide/show — this hide
+        // already covers the sequence, and Phase 7 below restores the
+        // cursor once at the end.
+        isBulkApplyInProgress = true
+        defer { isBulkApplyInProgress = false }
+
         if isNotchedDisplay {
             // MARK: Phase 6a: full-sort execution (notched)
 
@@ -7020,6 +7056,52 @@ extension MenuBarItemManager {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
+    /// Decides whether a divergence observation should trigger the apply.
+    ///
+    /// A single divergent reading of `currentLayoutDivergesFromSaved` can be
+    /// transient: an app activating with a wide application menu compresses
+    /// or covers status items, shifting their bounds for the duration the
+    /// menu is up. Reading that shift as "items in the wrong section" and
+    /// immediately dispatching a bulk apply replays the whole layout and
+    /// yanks the cursor around (#723) for geometry that resolves itself once
+    /// the menu closes. Requiring the same divergence to be observed on two
+    /// consecutive cache cycles filters out that transient case while still
+    /// reacting promptly to genuine, persistent drift.
+    ///
+    /// - Parameters:
+    ///   - divergedNow: The result of the current cycle's divergence check.
+    ///   - pendingSince: The timestamp of a prior unconfirmed observation, if
+    ///     one is armed.
+    ///   - now: The current time.
+    ///   - staleness: How long an armed observation remains eligible for
+    ///     confirmation. A stale arm is discarded and treated as a fresh
+    ///     first observation rather than confirmed, so an old, likely
+    ///     unrelated observation can't confirm a much later one.
+    /// - Returns: Whether this observation confirms the divergence (i.e.
+    ///   should trigger the apply), and the pending-observation state to
+    ///   carry forward to the next cycle.
+    nonisolated static func confirmedDivergence(
+        divergedNow: Bool,
+        pendingSince: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant,
+        staleness: Duration = .seconds(30)
+    ) -> (confirmed: Bool, newPendingSince: ContinuousClock.Instant?) {
+        guard divergedNow else {
+            return (false, nil)
+        }
+        guard let pendingSince else {
+            // First observation: arm and defer this pass.
+            return (false, now)
+        }
+        guard now - pendingSince <= staleness else {
+            // The prior arm is too old to confirm against; discard it and
+            // re-arm on this observation instead.
+            return (false, now)
+        }
+        // Second consecutive observation within the staleness window: confirmed.
+        return (true, nil)
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -7079,6 +7161,16 @@ extension MenuBarItemManager {
         // Divergence is computed lazily: only consulted when
         // windowIDsChanged didn't already advance the gate, so the
         // happy path on app quit/relaunch pays nothing.
+        //
+        // A single divergent reading is required to be *stable* across two
+        // consecutive cache cycles before it advances the gate (#723): an
+        // app activating with a wide application menu can transiently
+        // compress or cover status items, which currentLayoutDivergesFromSaved
+        // reads as items in the wrong section even though the geometry
+        // reverts once the menu closes. windowIDsChanged is a direct,
+        // trustworthy signal (an item genuinely disappeared) and is not
+        // subject to this confirmation — it stays immediate and never
+        // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
         let windowIDsChanged = Self.windowIDsChanged(
@@ -7087,13 +7179,33 @@ extension MenuBarItemManager {
             previousDisplayID: previousDisplayID,
             currentDisplayID: currentDisplayID
         )
-        let layoutDiverged = windowIDsChanged
-            ? false
-            : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+        let layoutDiverged: Bool
+        if windowIDsChanged {
+            layoutDiverged = false
+        } else {
+            let divergedNow = currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+            let now = ContinuousClock.now
+            let decision = Self.confirmedDivergence(
+                divergedNow: divergedNow,
+                pendingSince: pendingDivergenceObservedAt,
+                now: now
+            )
+            pendingDivergenceObservedAt = decision.newPendingSince
+            if divergedNow, !decision.confirmed {
+                MenuBarItemManager.diagLog.debug("applySavedLayout: divergence observed, awaiting confirmation on next cycle")
+            } else if decision.confirmed {
+                MenuBarItemManager.diagLog.debug("applySavedLayout: divergence confirmed on second consecutive cycle")
+            }
+            layoutDiverged = decision.confirmed
+        }
         guard windowIDsChanged || layoutDiverged else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
             return false
         }
+        // A windowID-change apply proceeds regardless of any pending
+        // divergence arm; discard the stale arm so it can't spuriously
+        // confirm on a later, unrelated cycle once the bar has settled.
+        pendingDivergenceObservedAt = nil
 
         // Skip the bulk apply while the majority of items have no resolved
         // sourcePID — mirrors relocateNewLeftmostItems's unresolved-sourcePID
