@@ -26,7 +26,7 @@ final class CustomTooltipPanel: NSPanel {
     /// must never leave this singleton on screen forever (#734). The
     /// timer is refreshed on every `show(...)`, so a genuine long hover
     /// keeps the tooltip alive; it only fires after 10s of silence.
-    private var hideWatchdog: Timer?
+    private var hideWatchdog: Task<Void, Never>?
 
     private let label: NSTextField = {
         let field = NSTextField(labelWithString: "")
@@ -129,11 +129,11 @@ final class CustomTooltipPanel: NSPanel {
 
         // (Re)arm the watchdog on every show, so a stuck owner can never
         // pin the tooltip on screen indefinitely (#734).
-        hideWatchdog?.invalidate()
-        hideWatchdog = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.forceDismiss()
-            }
+        hideWatchdog?.cancel()
+        hideWatchdog = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
+            self?.forceDismiss()
         }
     }
 
@@ -189,7 +189,7 @@ final class CustomTooltipPanel: NSPanel {
         }
         currentOwner = nil
         orderOut(nil)
-        hideWatchdog?.invalidate()
+        hideWatchdog?.cancel()
         hideWatchdog = nil
     }
 
@@ -198,7 +198,7 @@ final class CustomTooltipPanel: NSPanel {
     private func forceDismiss() {
         currentOwner = nil
         orderOut(nil)
-        hideWatchdog?.invalidate()
+        hideWatchdog?.cancel()
         hideWatchdog = nil
     }
 }
@@ -212,7 +212,7 @@ final class CustomTooltipPanel: NSPanel {
 /// instance of this controller.
 @MainActor
 final class CustomTooltipController {
-    private var timer: Timer?
+    private var timer: Task<Void, Never>?
     private weak var view: NSView?
 
     /// A unique identifier for this controller, used as the tooltip owner token.
@@ -227,7 +227,7 @@ final class CustomTooltipController {
     }
 
     isolated deinit {
-        timer?.invalidate()
+        timer?.cancel()
     }
 
     @MainActor
@@ -236,17 +236,17 @@ final class CustomTooltipController {
         if delay <= 0 {
             showNow()
         } else {
-            timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                Task { @MainActor in
-                    self?.showNow()
-                }
+            timer = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(delay))
+                guard !Task.isCancelled else { return }
+                self?.showNow()
             }
         }
     }
 
     @MainActor
     func cancel() {
-        timer?.invalidate()
+        timer?.cancel()
         timer = nil
         CustomTooltipPanel.shared.dismiss(owner: id)
     }
