@@ -14,6 +14,7 @@ import Combine
 // actor under OSAllocatedUnfairLock for menu-bar event posting. Removing the shim
 // would force @unchecked Sendable wrappers. Drop this once Apple annotates them.
 @preconcurrency import CoreGraphics
+import Observation
 import os.lock
 
 /// Simple actor-based semaphore to prevent overlapping operations
@@ -157,7 +158,8 @@ actor SimpleSemaphore {
 
 /// Manager for menu bar items.
 @MainActor
-final class MenuBarItemManager: ObservableObject {
+@Observable
+final class MenuBarItemManager {
     static let layoutWatchdogTimeout: Duration = .seconds(6)
 
     /// Delay between relocation/restore moves and the subsequent recache,
@@ -165,11 +167,11 @@ final class MenuBarItemManager: ObservableObject {
     static let uiSettleDelay: Duration = .milliseconds(300)
 
     /// The current cache of menu bar items.
-    @Published private(set) var itemCache = ItemCache(displayID: nil)
+    private(set) var itemCache = ItemCache(displayID: nil)
 
     /// A Boolean value that indicates whether the control items for the
     /// hidden sections are missing from the menu bar.
-    @Published private(set) var areControlItemsMissing = false
+    private(set) var areControlItemsMissing = false
 
     /// Number of consecutive `ControlItemPair` lookup failures seen by
     /// `cacheItemsRegardless`. Reset to zero on the first successful lookup.
@@ -208,8 +210,8 @@ final class MenuBarItemManager: ObservableObject {
     private var temporarilyShownItemContexts = [TemporarilyShownItemContext]()
 
     /// A timer for rehiding temporarily shown menu bar items.
-    private nonisolated(unsafe) var rehideTimer: Timer?
-    private nonisolated(unsafe) var rehideCancellable: AnyCancellable?
+    private var rehideTimer: Timer?
+    private var rehideCancellable: AnyCancellable?
 
     /// Timestamp of the most recent menu bar item move operation.
     private var lastMoveOperationTimestamp: ContinuousClock.Instant?
@@ -225,6 +227,9 @@ final class MenuBarItemManager: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appState.navigationState`'s @Observable properties (wave 3).
+    private var navigationStateObservationTask: Task<Void, Never>?
+
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
     private var menuOpenCheckTask: Task<Bool, Never>?
@@ -234,13 +239,14 @@ final class MenuBarItemManager: ObservableObject {
     private var menuOpenCheckCachedAt: ContinuousClock.Instant?
 
     /// Timer for lightweight periodic cache checks.
-    private nonisolated(unsafe) var cacheTickCancellable: AnyCancellable?
+    private var cacheTickCancellable: AnyCancellable?
 
     /// Persisted identifiers of menu bar items we've already seen.
     private var knownItemIdentifiers = Set<String>()
     /// Suppresses the next automatic relocation of newly seen leftmost items.
     private var suppressNextNewLeftmostItemRelocation = false
 
+    @MainActor
     deinit {
         rehideTimer?.invalidate()
         rehideCancellable?.cancel()
@@ -440,7 +446,7 @@ final class MenuBarItemManager: ObservableObject {
     /// apply restores them, or when the user moves them to another section.
     private var notchOverflowEjectedUIDs = Set<String>()
     /// Placement preference for newly detected menu bar items.
-    @Published private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
+    private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
 
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
@@ -1466,35 +1472,24 @@ final class MenuBarItemManager: ObservableObject {
         }
         .store(in: &c)
 
-        appState.navigationState.$settingsNavigationIdentifier
-            .sink { [weak self] identifier in
-                guard let self, identifier == .menuBarLayout else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+        // `navigationState` (AppNavigationState) is @Observable (wave 3), so
+        // its old `$settingsNavigationIdentifier`/`$isSettingsPresented`
+        // Combine projections are gone. Both old subscribers wanted the same
+        // outcome (refresh the image cache once Menu Bar Layout becomes the
+        // presented settings pane), just triggered from two different edges
+        // (identifier changing while already presented, vs. presented
+        // becoming true while identifier is already .menuBarLayout), so they
+        // are combined into a single Observations-Task tracking both.
+        navigationStateObservationTask = Task { [weak self] in
+            guard let self, let appState = self.appState else { return }
+            let changes = Observations { [navigationState = appState.navigationState] in
+                (navigationState.settingsNavigationIdentifier, navigationState.isSettingsPresented)
             }
-            .store(in: &c)
-
-        // When Settings reopens with Menu Bar Layout already selected,
-        // settingsNavigationIdentifier does not change, so the subscriber
-        // above does not fire. Observe isSettingsPresented to catch this case.
-        appState.navigationState.$isSettingsPresented
-            .removeDuplicates()
-            .sink { [weak self] isPresented in
-                guard
-                    let self,
-                    isPresented,
-                    appState.navigationState.settingsNavigationIdentifier == .menuBarLayout
-                else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+            for await (identifier, isPresented) in changes {
+                guard isPresented, identifier == .menuBarLayout else { continue }
+                await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
             }
-            .store(in: &c)
+        }
 
         // Rescan on menu bar window-list changes. cacheItemsIfNeeded compares
         // the current items-only window IDs against the cached set and recaches
@@ -6108,9 +6103,11 @@ extension MenuBarItemManager {
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
 
-        await MainActor.run {
-            appState.objectWillChange.send()
-        }
+        // `appState` is now `@Observable` (wave 4), so the manual
+        // `objectWillChange.send()` poke that used to force views bound to
+        // `appState` to refresh after the async `imageCache` mutations above
+        // is no longer needed: Observation tracks each mutated property
+        // (`imageCache`'s own storage) directly, independent of this poke.
 
         // Clear any stale -1 sentinel that may have been written into
         // menuBarHeightCache while the Menubar window was transiently
@@ -6410,7 +6407,9 @@ extension MenuBarItemManager {
             guard let appState = self.appState else { return }
             appState.imageCache.performCacheCleanup()
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-            await MainActor.run { appState.objectWillChange.send() }
+            // `appState` is now `@Observable` (wave 4); Observation tracks
+            // the `imageCache` mutations above directly, so the manual
+            // `objectWillChange.send()` poke is no longer needed.
         }
     }
 

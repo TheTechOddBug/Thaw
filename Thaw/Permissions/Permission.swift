@@ -20,11 +20,7 @@ class Permission: Identifiable {
     /// A Boolean value that indicates whether the app has this permission.
     private(set) var hasPermission = false {
         didSet {
-            // The polling timer reassigns this every few seconds; only an
-            // actual transition should notify the owner.
-            if hasPermission != oldValue {
-                onChange?()
-            }
+            onChange?()
         }
     }
 

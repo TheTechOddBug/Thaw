@@ -307,7 +307,9 @@ final class ControlItem {
                     guard let self else { return }
                     guard let isDragging, isDragging != previous else { continue }
                     previous = isDragging
-                    updateStatusItem()
+                    if isDragging {
+                        updateStatusItem()
+                    }
                 }
             }
 

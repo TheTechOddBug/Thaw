@@ -353,11 +353,11 @@ private final class IceBarHostingView: NSHostingView<IceBarContentView> {
 // MARK: - IceBarContentView
 
 private struct IceBarContentView: View {
-    @ObservedObject var appState: AppState
-    @ObservedObject var colorManager: IceBarColorManager
-    @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var imageCache: MenuBarItemImageCache
-    @ObservedObject var menuBarManager: MenuBarManager
+    let appState: AppState
+    let colorManager: IceBarColorManager
+    let itemManager: MenuBarItemManager
+    let imageCache: MenuBarItemImageCache
+    let menuBarManager: MenuBarManager
     @State private var frame = CGRect.zero
     @State private var scrollIndicatorsFlashTrigger = 0
     @State private var cacheGracePeriodActive = true
@@ -723,9 +723,9 @@ private struct IceBarContentView: View {
 private struct IceBarItemView: View {
     private static let diagLog = DiagLog(category: "IceBar.ItemView")
 
-    @ObservedObject var imageCache: MenuBarItemImageCache
-    @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var menuBarManager: MenuBarManager
+    let imageCache: MenuBarItemImageCache
+    let itemManager: MenuBarItemManager
+    let menuBarManager: MenuBarManager
 
     @State private var isHovered = false
 

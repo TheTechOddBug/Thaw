@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import Observation
@@ -52,7 +53,9 @@ final class MenuBarAppearanceManager {
                 }
             } else {
                 if !needsOverlayPanels(for: configuration) {
-                    closeAllOverlayPanels()
+                    while let panel = overlayPanels.popFirst() {
+                        panel.close()
+                    }
                 }
             }
         }
@@ -81,25 +84,19 @@ final class MenuBarAppearanceManager {
     ///
     /// `configuration` is now a plain `@Observable` property rather than a
     /// Combine `@Published` one, so there's no `$configuration` publisher to
-    /// throttle directly. Instead, the loop over `Observations {
-    /// configuration }` sleeps for the throttle interval after handling each
-    /// value. `Observations` yields the *latest* value when next awaited, so
-    /// any changes made during the sleep coalesce into a single newest
-    /// element — preserving the original's "at most one reaction per
-    /// interval, using the newest value seen" semantics without relying on
-    /// swift-async-algorithms' underscored `_throttle(for:latest:)` API.
+    /// throttle directly. Instead, `Observations { configuration }` (an
+    /// `AsyncSequence`) is wrapped with AsyncAlgorithms' `_throttle(for:
+    /// latest:)`. The leading underscore is not a typo: in the pinned
+    /// swift-async-algorithms 1.1.5 revision, the rate-limiting throttle
+    /// overloads are still exposed under the underscored name pending
+    /// stabilization — `_throttle(for:latest:)` is the only public throttle
+    /// operator this package version actually provides. The `latest: true`
+    /// argument preserves the original's "coalesce to the newest value seen
+    /// during the interval" semantics.
     private var configurationPanelObservationTask: Task<Void, Never>?
 
     /// The currently managed menu bar overlay panels.
     private(set) var overlayPanels = Set<MenuBarOverlayPanel>()
-
-    /// The shared Mission Control detector used by all overlay panels.
-    ///
-    /// Owned here, alongside `overlayPanels`, rather than one per panel:
-    /// probing the window server for displacement is a synchronous IPC
-    /// call, and running it once for the whole app instead of once per
-    /// screen is the point of this type. See `MissionControlDetector`.
-    let missionControlDetector = MissionControlDetector()
 
     /// The amount to inset the menu bar if called for by the configuration.
     let menuBarInsetAmount: CGFloat = 3.5
@@ -138,12 +135,10 @@ final class MenuBarAppearanceManager {
                 guard let self else {
                     return
                 }
-                // Snapshot the owning screens before any teardown; only
-                // rebuild when the screen set actually changed.
-                // `configureOverlayPanels` already closes existing panels,
-                // so no separate close is needed here.
-                let owningScreens = Set(overlayPanels.map(\.owningScreen))
-                if owningScreens != Set(NSScreen.screens) {
+                while let panel = overlayPanels.popFirst() {
+                    panel.close()
+                }
+                if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.managedScreens) {
                     configureOverlayPanels(with: configuration)
                 }
             }
@@ -152,7 +147,7 @@ final class MenuBarAppearanceManager {
         configurationPanelObservationTask?.cancel()
         configurationPanelObservationTask = Task { [weak self] in
             let changes = Observations { [weak self] in self?.configuration }
-            for await configuration in changes {
+            for await configuration in changes._throttle(for: .milliseconds(100), latest: true) {
                 guard let self else {
                     return
                 }
@@ -165,11 +160,10 @@ final class MenuBarAppearanceManager {
                     configureOverlayPanels(with: configuration)
                 } else if !needsOverlayPanels(for: configuration) {
                     // Configuration no longer needs panels, close them
-                    closeAllOverlayPanels()
+                    while let panel = overlayPanels.popFirst() {
+                        panel.close()
+                    }
                 }
-                // Throttle: changes made while sleeping coalesce, and the
-                // next iteration observes only the latest value.
-                try? await Task.sleep(for: .milliseconds(100))
             }
         }
 
@@ -204,7 +198,9 @@ final class MenuBarAppearanceManager {
         force: Bool = false
     ) {
         // Close existing panels to prevent memory leaks and duplicate windows
-        closeAllOverlayPanels()
+        while let panel = overlayPanels.popFirst() {
+            panel.close()
+        }
 
         guard
             let appState,
@@ -214,29 +210,12 @@ final class MenuBarAppearanceManager {
         }
 
         var overlayPanels = Set<MenuBarOverlayPanel>()
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             let panel = MenuBarOverlayPanel(appState: appState, owningScreen: screen)
             overlayPanels.insert(panel)
             panel.needsShow = true
         }
 
         self.overlayPanels = overlayPanels
-
-        // Mission Control displaces every on-screen window together, so one
-        // representative screen is enough to drive the shared detector for
-        // all panels.
-        if let representativeScreen = NSScreen.screens.first {
-            missionControlDetector.start(representativeScreen: representativeScreen)
-        }
-    }
-
-    /// Closes all currently managed overlay panels and stops the shared
-    /// Mission Control detector, since nothing needs it while there are no
-    /// panels to drive.
-    private func closeAllOverlayPanels() {
-        while let panel = overlayPanels.popFirst() {
-            panel.close()
-        }
-        missionControlDetector.stop()
     }
 }

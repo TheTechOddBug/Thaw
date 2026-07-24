@@ -58,6 +58,18 @@ final class AppState {
     /// Manager for settings profiles.
     let profileManager = ProfileManager()
 
+    /// Briefly adds a virtual display on single-display machines so the window
+    /// server publishes the marker windows needed to resolve unidentified menu
+    /// bar items, then tears it down.
+    ///
+    /// `@ObservationIgnored`: the Observation macro cannot generate its
+    /// tracked-access init accessor for a `lazy` property (it closes over
+    /// `self` in a context the macro can't express), so this is exempted
+    /// from observation tracking. No view reads this property directly in
+    /// its body, so the exemption has no UI-observability effect.
+    @ObservationIgnored
+    private(set) lazy var virtualDisplayProvoker = VirtualDisplayProvoker(appState: self)
+
     /// Manager for app updates.
     let updatesManager = UpdatesManager()
 
@@ -76,18 +88,19 @@ final class AppState {
     /// the old `$isDraggingMenuBarItem.removeDuplicates().sink` subscription.
     private var hidEventManagerObservationTask: Task<Void, Never>?
 
-    /// Observes `NSApplication.didChangeScreenParametersNotification` via
-    /// `NotificationCenter.notifications(named:)`, replacing a
-    /// `NotificationCenter.publisher(for:).debounce(for:scheduler:).sink`
-    /// Combine chain with an async sequence debounced through
-    /// swift-async-algorithms' `.debounce(for:)`.
-    private var screenParametersObservationTask: Task<Void, Never>?
+    /// Observes `itemManager.itemCache` (wave 4), which is `@Observable`
+    /// rather than a Combine `ObservableObject`, replacing the old
+    /// `$itemCache.debounce(for: .seconds(0.5), scheduler:
+    /// DispatchQueue.main).sink` subscription that let the virtual display
+    /// provoker decide whether to briefly add a virtual display after each
+    /// cache cycle settles.
+    private var itemCacheProvokerObservationTask: Task<Void, Never>?
 
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
 
     /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.screens.count
+    private var lastKnownScreenCount = NSScreen.managedScreens.count
 
     /// Prevent repeated restart attempts.
     private var isRestarting = false
@@ -278,7 +291,6 @@ final class AppState {
             }
             .store(in: &c)
 
-        hidEventManagerObservationTask?.cancel()
         hidEventManagerObservationTask = Task { [weak self, weak hidEventManager] in
             let changes = Observations { hidEventManager?.isDraggingMenuBarItem ?? false }
             for await isDragging in changes {
@@ -298,7 +310,6 @@ final class AppState {
         // navigation (not high-frequency), so per-change firing is
         // equivalent in practice and avoids reimplementing throttle(latest:)
         // by hand.
-        navigationStateObservationTask?.cancel()
         navigationStateObservationTask = Task { [weak self] in
             guard let self else { return }
             let changes = Observations { [navigationState] in
@@ -332,65 +343,67 @@ final class AppState {
         // tracking, which composes transparently across nested `@Observable`
         // object graphs without any manual forwarding.
 
-        // Mirrors DisplaySettingsManager.configureObservers' screenParametersTask:
-        // a plain NotificationCenter.publisher().debounce(scheduler:) chain here would
-        // be the only remaining Combine cancellable doing what an async
-        // sequence already does better elsewhere in the codebase, so it's
-        // reproduced with an AsyncStream fed by a NotificationCenter observer,
-        // coalesced with swift-async-algorithms' `.debounce(for:)`, instead of
-        // a Combine hop to DispatchQueue.main. Notification isn't Sendable, so
-        // the stream carries Void and the count is re-read from NSScreen
-        // (MainActor-isolated, like the rest of this task's body) per event.
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        // Register the observer synchronously during setup (not inside the
-        // task body) so notifications posted before the task first runs are
-        // still captured; the task removes it when it finishes.
-        let screenParameterObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil,
-            queue: .main
-        ) { _ in screenParameterContinuation.yield(()) }
-        screenParametersObservationTask?.cancel()
-        screenParametersObservationTask = Task { @MainActor [weak self] in
-            defer { NotificationCenter.default.removeObserver(screenParameterObserver) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(0.5)) {
+        // After each cache cycle settles, let the provoker decide whether to
+        // briefly add a virtual display to resolve any single-display
+        // orphans. `itemManager` is now `@Observable` (wave 4), so it no
+        // longer has an `$itemCache` publisher; `Observations { }` is an
+        // `AsyncSequence`, so the debounce is reproduced with
+        // AsyncAlgorithms' `.debounce(for:)`.
+        let itemManagerForProvoker = itemManager
+        itemCacheProvokerObservationTask = Task { [weak self] in
+            let changes = Observations { itemManagerForProvoker.itemCache }
+            for await _ in changes.debounce(for: .seconds(0.5)) {
                 guard let self else { return }
-                let count = NSScreen.screens.count
+                self.virtualDisplayProvoker.considerProvoking()
+            }
+        }
+
+        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .map { _ in NSScreen.managedScreens.count }
+            .sink { [weak self] count in
+                guard let self else { return }
                 defer { self.lastKnownScreenCount = count }
                 if count < self.lastKnownScreenCount {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
-                    // A display change relocates items to the remaining
-                    // display and leaves the menu bar geometry (Control
-                    // Center position, item bounds) unsettled for a short
-                    // window. Open a settling period so saved-layout restores
-                    // defer until the bar restabilizes and then run once on
-                    // settled geometry. Without this, a restore could fire
-                    // against transient off-screen geometry: Control Center's
-                    // stale left edge produces a negative notch-overflow
-                    // budget that collapses the hidden section into visible
-                    // and is then persisted into the saved order.
-                    self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
-                    // Force item cache rebuild so displayID reflects current
-                    // display geometry (items moved to remaining display).
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                    // Force image cache: remove entries for items no longer
-                    // present, trigger re-capture for current display.
-                    self.imageCache.performCacheCleanup()
-                    await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-                    self.diagLog.info("Cache refresh complete after display disconnect")
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        // A display change relocates items to the remaining
+                        // display and leaves the menu bar geometry (Control
+                        // Center position, item bounds) unsettled for a short
+                        // window. Open a settling period so saved-layout restores
+                        // defer until the bar restabilizes and then run once on
+                        // settled geometry. Without this, a restore could fire
+                        // against transient off-screen geometry: Control Center's
+                        // stale left edge produces a negative notch-overflow
+                        // budget that collapses the hidden section into visible
+                        // and is then persisted into the saved order.
+                        self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
+                        // Force item cache rebuild so displayID reflects current
+                        // display geometry (items moved to remaining display).
+                        await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                        // Force image cache: remove entries for items no longer
+                        // present, trigger re-capture for current display.
+                        self.imageCache.performCacheCleanup()
+                        await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+                        self.diagLog.info("Cache refresh complete after display disconnect")
+                    }
                 } else if count > self.lastKnownScreenCount {
                     self.diagLog.info("Display connected: refresh item cache")
-                    // Defer the saved-layout restore until the menu bar
-                    // geometry settles after the new display attaches; see
-                    // the disconnect branch above for the rationale.
-                    self.itemManager.startSettlingPeriod(reason: "displayConnect")
-                    // Items keep their windowIDs when moving to new display.
-                    // Item cache rebuild picks up new items on the added display.
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                    self.diagLog.info("Item cache refreshed after display connect")
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        // Defer the saved-layout restore until the menu bar
+                        // geometry settles after the new display attaches; see
+                        // the disconnect branch above for the rationale.
+                        self.itemManager.startSettlingPeriod(reason: "displayConnect")
+                        // Items keep their windowIDs when moving to new display.
+                        // Item cache rebuild picks up new items on the added display.
+                        await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                        self.diagLog.info("Item cache refreshed after display connect")
+                    }
                 }
             }
-        }
+            .store(in: &c)
 
         cancellables = c
     }
