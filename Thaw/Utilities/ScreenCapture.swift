@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import CoreVideo
 import Foundation
 import os.lock
 import ScreenCaptureKit
@@ -190,6 +191,14 @@ enum ScreenCapture {
         let configuration = SCStreamConfiguration()
         // captureResolution is not used here; explicit width/height below take precedence.
         configuration.showsCursor = false
+        // Pin the pixel format so the buffer is deterministic across SDR/EDR
+        // displays. Left unset, an HDR display can hand back a 10-bit buffer that
+        // the CIImage → CGImage conversion renders subtly differently, an
+        // intermittent display-dependent color glitch. 32BGRA is the historical
+        // default and what the crop/compare path expects. Do NOT set
+        // `colorSpaceName` — it triggers an internal CoreGraphics tone-mapping
+        // pass that destructively clips color (learned from BetterCapture).
+        configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.width = Int((screenBounds.width * scale).rounded())
         configuration.height = Int((screenBounds.height * scale).rounded())
         configuration.sourceRect = localSourceRect
@@ -227,15 +236,30 @@ enum ScreenCapture {
 
     /// Helper to get shareable content using ScreenCaptureKit's async API.
     ///
+    /// One capture tick can issue several independent calls (hosting-window
+    /// capture, display-strip capture, hosting frame probe), each of which
+    /// would otherwise trigger a full window/display enumeration.
+    /// `ShareableContentCache` coalesces calls within `maxAge` of each other
+    /// into a single underlying fetch.
+    static func getShareableContent(maxAge: Duration = .milliseconds(150)) async throws -> SCShareableContent {
+        let snapshot = try await shareableContentCache.content(
+            maxAge: maxAge,
+            fetch: fetchShareableContentUncached
+        )
+        return snapshot.content
+    }
+
+    private static let shareableContentCache = ShareableContentCache<ShareableContentSnapshot>()
+
     /// `SCShareableContent.current` is the async form of
     /// `getShareableContentWithCompletionHandler:`. It has no built-in
     /// cancellation, so it runs inside a child task that races a
     /// `withTaskCancellationHandler` resume: a cancelled caller aborts promptly
     /// instead of proceeding to a wasted capture, while a late framework result
     /// is discarded because the continuation has already been taken.
-    private static func getShareableContent() async throws -> SCShareableContent {
+    private static func fetchShareableContentUncached() async throws -> ShareableContentSnapshot {
         let box = ContinuationBox<SCShareableContent, any Error>()
-        return try await withTaskCancellationHandler {
+        let content = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
                 Task {
@@ -251,6 +275,7 @@ enum ScreenCapture {
             // Resume with cancellation error if still pending.
             box.takeContinuation()?.resume(throwing: CancellationError())
         }
+        return ShareableContentSnapshot(content: content)
     }
 }
 
