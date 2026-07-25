@@ -2094,6 +2094,8 @@ extension MenuBarItemManager {
 
             validCount += 1
             if item.sourcePID == nil {
+                // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+                // Changing this string breaks log-replay regression tests.
                 MenuBarItemManager.diagLog.warning("Missing sourcePID for \(item.logString)")
             }
 
@@ -6966,6 +6968,8 @@ extension MenuBarItemManager {
                 guard uid != hiddenCtrlUID, uid != ahCtrlUID else { return false }
                 return sectionByWindowID[item.windowID] == sectionName
             }
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 "applyProfileLayout: current \(sectionName.logString) has \(sectionItems.count) items: \(sectionItems.map(\.uniqueIdentifier))"
             )
@@ -7047,6 +7051,8 @@ extension MenuBarItemManager {
                 case nil:
                     "<no placement returned>"
                 }
+                // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+                // Changing this string breaks log-replay regression tests.
                 MenuBarItemManager.diagLog.debug(
                     "Profile layout: planUnmanagedPlacement \(uid) -> \(placementSummary)"
                 )
@@ -7147,6 +7153,8 @@ extension MenuBarItemManager {
                 availableWidth -= chevronFootprint
             }
 
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 """
                 Notch overflow budget: \(budget.logString) \
@@ -7172,6 +7180,8 @@ extension MenuBarItemManager {
             notchOverflowEjectedUIDs = Set(overflowResult.overflowUIDs)
 
             if !overflowResult.overflowUIDs.isEmpty {
+                // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+                // Changing this string breaks log-replay regression tests.
                 MenuBarItemManager.diagLog.info(
                     "Profile layout: notch overflow; \(overflowResult.overflowUIDs.count) item(s) moved from visible to hidden"
                 )
@@ -7393,6 +7403,8 @@ extension MenuBarItemManager {
             let needsAHMove = currentHiddenSet.intersection(desiredAHSet)
             let totalSectionMismatch = needsHiddenMove.count + needsAHMove.count
 
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: ahCtrlUID=\(ahCtrlUID ?? "nil"), crossSectionMoves=\(crossSectionMoves), totalSectionMismatch=\(totalSectionMismatch)"
             )
@@ -7402,12 +7414,18 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: currentAH=\(currentAHSet.sorted())"
             )
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredHidden=\(desiredHiddenSet.sorted())"
             )
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredAH=\(desiredAHSet.sorted())"
             )
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredVisible=\(desiredVisibleSet.sorted())"
             )
