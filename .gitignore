@@ -11,9 +11,8 @@ build/
 !.github/actions/build/
 !.github/actions/build/**
 DerivedData/
-Fuzzing/.build/
 Sparkle
 ThawCtl/.build/
 xcode-skills
 xcuserdata/
-scorecard-*.json
+plans/
