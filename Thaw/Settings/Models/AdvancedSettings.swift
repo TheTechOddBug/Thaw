@@ -149,6 +149,21 @@ final class AdvancedSettings {
         }
     }
 
+    /// A Boolean value that controls whether the Thaw Bar is used to reveal
+    /// hidden items while notch overflow has items ejected.
+    ///
+    /// Expanding the hidden section inline cannot show items that overflow
+    /// ejected: they were ejected precisely because the visible row had no room
+    /// left beside the notch. When this is on, a display with ejected items
+    /// reveals through the Thaw Bar regardless of its per-display Thaw Bar
+    /// setting. Only affects displays that currently have ejected items.
+    var useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow {
+        didSet {
+            guard oldValue != useThawBarOnNotchOverflow else { return }
+            Defaults.set(useThawBarOnNotchOverflow, forKey: .useThawBarOnNotchOverflow)
+        }
+    }
+
     /// A Boolean value that controls whether left-clicks on menu bar items
     /// from the IceBar are delivered via an accessibility action (AXShowMenu,
     /// falling back to AXPress) instead of a synthetic mouse click.
@@ -254,6 +269,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
+        Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
         Defaults.ifPresent(key: .useSyntheticCursorMoves, assign: &useSyntheticCursorMoves)
         Defaults.ifPresent(key: .stampWindowIDOnLegacyMoves, assign: &stampWindowIDOnLegacyMoves)
@@ -344,6 +360,8 @@ final class AdvancedSettings {
                 useLCSSortingOnNotchedDisplays = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
+            case "useThawBarOnNotchOverflow":
+                useThawBarOnNotchOverflow = boolValue
             case "useAXClickDelivery":
                 useAXClickDelivery = boolValue
             case "useSyntheticCursorMoves":
