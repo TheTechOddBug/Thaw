@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" width="400" srcset="Resources/headers/Header_Dark.svg">
-    <source media="(prefers-color-scheme: light)" width="400" srcset="Resources/headers/Header_Light.svg">
-    <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
+    <source media="(prefers-color-scheme: dark)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-dark.svg">
+    <source media="(prefers-color-scheme: light)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg">
+    <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
 
@@ -22,9 +22,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.svg" height="42" /></a>
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="42" /></a>
   &nbsp;&nbsp;
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.svg" height="42" /></a>
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="42" /></a>
 </p>
 
 <p align="center">
