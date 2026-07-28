@@ -41,10 +41,6 @@
 <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl%2FThaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </div>
 
-<br>
-
-![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
-
 > [!NOTE]
 > Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
@@ -152,44 +148,14 @@ Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md)
 
 ## Roadmap
 
+Near-term direction (roughly the next year): keep Thaw compatible with current
+macOS releases, finish menu-bar layout/trigger work below, and harden release
+and contribution practices. Items may slip; the list is intent, not a contract.
+
 - **Menu bar item management**: individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
 - **Menu bar appearance**: rounded screen corners
 - **Hotkeys**: enable/disable auto rehide; temporarily show individual menu bar items
 - **Other**: menu bar widgets
-
-## Gallery
-
-> Click any screenshot to view it full size.
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd"><img alt="Item layout" src="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd" width="400" /></a><br />
-      <sub><b>Item layout</b></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573"><img alt="Show hidden menu bar items below the menu bar" src="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573" width="400" /></a><br />
-      <sub><b>Show hidden items below the menu bar</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c"><img alt="Drag-and-drop interface to arrange menu bar items" src="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c" width="400" /></a><br />
-      <sub><b>Drag-and-drop arrangement</b></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e"><img alt="Customize the menu bar's appearance" src="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e" width="400" /></a><br />
-      <sub><b>Customize the appearance</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d"><img alt="Menu bar item search" src="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d" width="400" /></a><br />
-      <sub><b>Menu bar item search</b></sub>
-    </td>
-    <td width="50%"></td>
-  </tr>
-</table>
 
 ## Contributors
 
@@ -208,6 +174,16 @@ Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/T
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=stonerl/Thaw&type=Date" width="100%" />
   </picture>
 </a>
+
+## Project documentation
+
+- [Contributing](.github/CONTRIBUTING.md)
+- [Governance](.github/GOVERNANCE.md)
+- [Security policy](.github/SECURITY.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Assurance case](docs/ASSURANCE_CASE.md)
+- [Verifying releases](docs/VERIFYING_RELEASES.md)
+- [URI schemes](docs/URI_SCHEMES.md)
 
 ## License
 
