@@ -219,6 +219,7 @@ Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)
 - [Verifying releases](docs/VERIFYING_RELEASES.md)
+- [Release and update distribution](docs/RELEASES.md)
 - [URI schemes](docs/URI_SCHEMES.md)
 
 ## License

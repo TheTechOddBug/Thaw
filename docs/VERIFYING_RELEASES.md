@@ -30,6 +30,9 @@ Appcast URL: `https://thaw-app.github.io/updates/appcast.xml` (`SUFeedURL`).
 Legacy installs may still poll `https://stonerl.github.io/Thaw/appcast.xml`
 until that host redirects here.
 
+How installers vs Sparkle payloads are split across repos:
+[Release and update distribution](RELEASES.md).
+
 Sparkle uses this key automatically when checking for updates inside the app.
 You normally do **not** need to verify EdDSA by hand if you install a notarized
 build and use in-app updates.
