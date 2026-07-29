@@ -44,6 +44,9 @@ jobs:
           results_format: sarif
           # Publishes results to the OpenSSF REST API and enables the README badge.
           publish_results: true
+          # Fine-grained PAT secret with admin-level repository read access so
+          # Branch-Protection can be evaluated when classic protection APIs are used.
+          repo_token: ${{ secrets.SCORECARD_READ_TOKEN }}
 
       - name: "Upload artifact"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
