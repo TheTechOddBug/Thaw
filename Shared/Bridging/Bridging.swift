@@ -618,15 +618,11 @@ nonisolated extension Bridging {
         else {
             return false
         }
-        // A negative width or height describes a geometrically valid
-        // rectangle (CGRect semantics treat it as extending in the other
-        // direction), so standardize before checking the dimensions.
-        let standardized = bounds.standardized
-        guard standardized.width > 0, standardized.height > 0 else {
+        guard bounds.width > 0, bounds.height > 0 else {
             return false
         }
-        let pixelWidth = (standardized.width * scale).rounded()
-        let pixelHeight = (standardized.height * scale).rounded()
+        let pixelWidth = (bounds.width * scale).rounded()
+        let pixelHeight = (bounds.height * scale).rounded()
         guard
             pixelWidth <= CGFloat(maximumCaptureDimension),
             pixelHeight <= CGFloat(maximumCaptureDimension)
