@@ -74,12 +74,6 @@ enum HookRunner {
         let previousProfileName: String?
     }
 
-    /// Outcome of racing the subprocess against the timeout.
-    private enum RaceOutcome {
-        case completed(ExecutionRecord<StringOutput<UTF8>, StringOutput<UTF8>>)
-        case timedOut
-    }
-
     /// Non-throwing wrapper. Logs every outcome (success, failure, skip)
     /// and never propagates errors so the apply pipeline keeps moving.
     static func runIfEnabled(
@@ -155,26 +149,45 @@ enum HookRunner {
 
         let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
-        // On timeout or outer-task cancellation, Subprocess runs this
-        // teardown sequence against the child before this call returns,
-        // so there is no need to poll isRunning or manually escalate
-        // signals here.
+        // Cancelling the subprocess runs this teardown sequence against the
+        // hook's whole process group, which is what bounds the run: a
+        // `#!/bin/sh` wrapper does not forward a signal to its own child and
+        // then wait for it, so signalling the wrapper alone left the real work
+        // running. Targeting the group reaches those descendants, and the
+        // implicit final kill that closes every sequence inherits the group
+        // from the last explicit step.
+        //
+        // `createSession` is not optional here. Without it the hook stays in
+        // Thaw's own process group, and a group-targeted signal would be
+        // delivered to Thaw as well.
+        //
+        // The signal is SIGTERM rather than SIGINT because a non-interactive
+        // `sh` starts background jobs with SIGINT ignored: `sleep 30 &`
+        // survived it while `sh` itself died, and Subprocess ends the sequence
+        // as soon as the process it launched exits, so the kill that closes
+        // the sequence never got the chance to run. A descendant that traps
+        // SIGTERM can still outlive the run for the same reason.
         let platformOptions: PlatformOptions = {
             var options = PlatformOptions()
+            options.createSession = true
             options.teardownSequence = [
-                .send(signal: .interrupt, allowedDurationToNextStep: .seconds(1)),
+                .send(signal: .terminate, toProcessGroup: true, allowedDurationToNextStep: .seconds(1)),
             ]
             return options
         }()
 
-        // Race the subprocess against a timeout task. Whichever finishes
-        // first wins; cancelAll() then cancels the other, which for the
-        // subprocess task triggers the teardown sequence above.
-        let outcome: RaceOutcome
+        // The subprocess races a sleeping arm that throws at the budget, and
+        // whichever finishes first wins. This can be structured now: leaving
+        // the group cancels the subprocess, and cancellation tears down the
+        // hook's process group, so the child the group waits for is one that
+        // has just been killed rather than one running on its own schedule.
+        let result: ExecutionResult<Void, StringOutput<UTF8>, StringOutput<UTF8>>
         do {
-            outcome = try await withThrowingTaskGroup(of: RaceOutcome.self) { group in
+            result = try await withThrowingTaskGroup(
+                of: ExecutionResult<Void, StringOutput<UTF8>, StringOutput<UTF8>>.self
+            ) { group in
                 group.addTask {
-                    let result = try await Subprocess.run(
+                    try await Subprocess.run(
                         .path(executablePath),
                         arguments: Arguments(arguments),
                         environment: environment,
@@ -182,38 +195,40 @@ enum HookRunner {
                         output: .string(limit: outputByteLimit),
                         error: .string(limit: outputByteLimit)
                     )
-                    return .completed(result)
                 }
                 group.addTask {
                     try await Task.sleep(for: .seconds(clamped))
-                    return .timedOut
+                    throw HookError.timedOut(after: clamped)
                 }
                 defer { group.cancelAll() }
+                // Both arms are always added, so there is a first result to
+                // take; an empty group would mean the caller went away.
                 guard let first = try await group.next() else {
                     throw CancellationError()
                 }
                 return first
             }
+        } catch let error as HookError {
+            if case .timedOut = error {
+                diagLog.warning("hook exceeded its \(clamped)s budget; terminating it: \(hook.path)")
+            }
+            throw error
         } catch is CancellationError {
+            // The caller went away rather than the hook overrunning.
             throw CancellationError()
         } catch {
             throw HookError.runFailed(path: hook.path, error: error)
         }
 
-        switch outcome {
-        case .timedOut:
-            throw HookError.timedOut(after: clamped)
-        case let .completed(result):
-            let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let exitStatus: Int32 = switch result.terminationStatus {
-            case let .exited(code): code
-            case let .signaled(code): code
-            }
-            guard result.terminationStatus.isSuccess else {
-                throw HookError.nonZeroExit(exitStatus)
-            }
-            return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
+        let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let exitStatus: Int32 = switch result.terminationStatus {
+        case let .exited(code): code
+        case let .signaled(code): code
         }
+        guard result.terminationStatus.isSuccess else {
+            throw HookError.nonZeroExit(exitStatus)
+        }
+        return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
     }
 }
