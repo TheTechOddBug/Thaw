@@ -59,6 +59,17 @@ final class MenuBarAppearanceManager {
         }
     }
 
+    /// Whether the system is currently drawing an opaque menu bar because
+    /// Accessibility's Reduce Transparency is enabled.
+    ///
+    /// The overlay panel composites behind the menu bar, so an opaque menu
+    /// bar material swallows the tint, background, and shape entirely. There
+    /// is no placement that avoids this — see
+    /// ``MenuBarOverlayPanel/updateWindowLevel()`` — so the appearance editor
+    /// tells the user about it instead of silently doing nothing.
+    private(set) var isReduceTransparencyEnabled =
+        NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+
     /// The shared app state.
     @ObservationIgnored
     private weak var appState: AppState?
@@ -145,6 +156,15 @@ final class MenuBarAppearanceManager {
                 if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.screens) {
                     configureOverlayPanels(with: configuration)
                 }
+            }
+            .store(in: &c)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
+            .debounce(for: 0.1, scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.isReduceTransparencyEnabled =
+                    NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
             }
             .store(in: &c)
 

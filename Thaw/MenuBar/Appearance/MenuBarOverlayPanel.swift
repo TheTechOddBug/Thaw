@@ -180,21 +180,6 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             }
             .store(in: &c)
 
-        // Toggling Reduce Transparency changes whether the system menu bar
-        // material is opaque, which decides whether the panel must sit above
-        // or behind the menu bar. Re-evaluate the window level and re-show.
-        NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
-            .debounce(for: 0.1, scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                updateWindowLevel()
-                needsShow = true
-            }
-            .store(in: &c)
-
         // Update application menu frame when the menu bar owning or frontmost app changes.
         Publishers.Merge(
             NSWorkspace.shared.publisher(
@@ -515,19 +500,19 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// Moves the panel behind the menu bar whenever a tint or shape is active
     /// so the menu bar's own blur blends the content and items stay crisp.
     ///
-    /// When Reduce Transparency is enabled, the menu bar's material is opaque,
-    /// so content composited behind it can never show through and the panel
-    /// would be invisible. In that case the panel is placed at `.statusBar`,
-    /// above the opaque menu bar background, so the tint stays visible.
+    /// Behind is the only workable placement, even when Reduce Transparency
+    /// makes the menu bar's material opaque and the panel invisible. The
+    /// window server composites the whole menu bar — background, application
+    /// menus, and status items alike — into a single window at
+    /// `kCGMainMenuWindowLevel`, so there is no z-order slot that covers the
+    /// background without also covering its content. A panel raised to
+    /// `.statusBar` paints over every menu bar item, which is what #844 hit:
+    /// the tint became visible, and the items disappeared underneath it.
     private func updateWindowLevel() {
         guard let appState else { return }
         let config = appState.appearanceManager.configuration
         if config.current.tintKind != .noTint || config.shapeKind != .noShape || config.current.backgroundKind != .none {
-            if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
-                level = .statusBar
-            } else {
-                level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
-            }
+            level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
         } else {
             level = .statusBar
         }

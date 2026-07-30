@@ -102,12 +102,40 @@ struct MenuBarAppearanceEditor: View {
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
             {
+                if appearanceManager.isReduceTransparencyEnabled {
+                    reduceTransparencyWarning
+                }
+
                 SettingsWarningPill(
                     message: "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
                     systemImage: "info.circle.fill"
                 )
             }
         }
+    }
+
+    /// Shown while Reduce Transparency is on, because the system then draws an
+    /// opaque menu bar that hides everything the overlay paints behind it.
+    /// Painting on top instead is not an option: it would cover the menu bar
+    /// items too. See ``MenuBarOverlayPanel/updateWindowLevel()``.
+    private var reduceTransparencyWarning: some View {
+        SettingsWarningPill(
+            title: "Menu bar effects are hidden by Reduce Transparency",
+            message: "macOS draws a solid menu bar while Reduce Transparency is on, so \(Constants.displayName) cannot tint or reshape it. Turn the setting off to see these effects.",
+            systemImage: "exclamationmark.triangle.fill",
+            tint: .orange,
+            actionTitle: "Open Settings",
+            action: openReduceTransparencySettings
+        )
+    }
+
+    private func openReduceTransparencySettings() {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?Seeing_Display"
+        ) else {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     private var isDynamicToggle: some View {
