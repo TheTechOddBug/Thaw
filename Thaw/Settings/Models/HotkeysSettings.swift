@@ -6,12 +6,13 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import Foundation
 
 /// Model for the app's Hotkeys settings.
 @MainActor
-final class HotkeysSettings: ObservableObject {
+@Observable
+final class HotkeysSettings {
+    @ObservationIgnored
     private let diagLog = DiagLog(category: "HotkeysSettings")
     /// The app's hotkey registry.
     let registry = HotkeyRegistry()
@@ -22,16 +23,22 @@ final class HotkeysSettings: ObservableObject {
     }
 
     /// Encoder for properties.
+    @ObservationIgnored
     private let encoder = JSONEncoder()
 
     /// Decoder for properties.
+    @ObservationIgnored
     private let decoder = JSONDecoder()
 
-    /// Storage for internal observers.
-    private var cancellables = Set<AnyCancellable>()
-
     /// The shared app state.
+    @ObservationIgnored
     private(set) weak var appState: AppState?
+
+    /// Loads persisted bindings and begins observing subsequent edits.
+    init() {
+        loadInitialState()
+        configureObservers()
+    }
 
     /// Performs the initial setup of the model.
     func performSetup(with appState: AppState) {
@@ -39,8 +46,6 @@ final class HotkeysSettings: ObservableObject {
         for hotkey in hotkeys {
             hotkey.performSetup(with: appState)
         }
-        loadInitialState()
-        configureCancellables()
     }
 
     /// Loads the model's initial state.
@@ -66,27 +71,35 @@ final class HotkeysSettings: ObservableObject {
     }
 
     /// Configures the internal observers for the model.
-    private func configureCancellables() {
-        var c = Set<AnyCancellable>()
-
+    ///
+    /// Each hotkey's callback is assigned after ``loadInitialState()`` has
+    /// already set its initial key combination, so — like the previous
+    /// `dropFirst()` Combine pipeline — the initial value is never persisted
+    /// redundantly, only subsequent changes.
+    private func configureObservers() {
         for hotkey in hotkeys {
-            hotkey.$keyCombination
-                .encode(encoder: encoder)
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] completion in
-                    if case let .failure(error) = completion {
-                        self?.diagLog.error("Error encoding hotkey: \(error)")
+            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
+                guard let self, let hotkey else { return }
+                if let keyCombination = hotkey.keyCombination {
+                    do {
+                        let data = try encoder.encode(keyCombination)
+                        withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
+                            dictionary[hotkey.action.rawValue] = data
+                            Defaults.set(dictionary, forKey: .hotkeys)
+                        }
+                    } catch {
+                        self.diagLog.error("Error encoding hotkey: \(error)")
                     }
-                } receiveValue: { data in
+                } else {
+                    // A cleared binding removes the entry entirely instead of
+                    // persisting an encoded nil.
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
-                        dictionary[hotkey.action.rawValue] = data
+                        dictionary.removeValue(forKey: hotkey.action.rawValue)
                         Defaults.set(dictionary, forKey: .hotkeys)
                     }
                 }
-                .store(in: &c)
+            }
         }
-
-        cancellables = c
     }
 
     /// Returns the hotkey with the given action.

@@ -11,11 +11,25 @@ import Combine
 import Foundation
 
 @MainActor
-final class ProfileManager: ObservableObject {
-    @Published private(set) var profiles: [ProfileMetadata] = []
+@Observable
+final class ProfileManager {
+    /// The manager's list of profile metadata.
+    ///
+    /// `didSet` does not fire for assignments made directly in this class's
+    /// `init` body, but it DOES fire for assignments made inside methods
+    /// called from `init` — including ``loadManifest()``'s assignment during
+    /// construction. That init-time ``rebuildProfileHotkeys()`` call no-ops
+    /// via its `appState` guard (appState isn't wired until
+    /// ``performSetup(with:)``), which is what preserves the previous
+    /// `$profiles.dropFirst()` Combine behavior in practice.
+    private(set) var profiles: [ProfileMetadata] = [] {
+        didSet {
+            rebuildProfileHotkeys()
+        }
+    }
 
     /// The ID of the currently active profile, or `nil`.
-    @Published var activeProfileID: UUID?
+    var activeProfileID: UUID?
 
     private let diagLog = DiagLog(category: "ProfileManager")
     private let encoder: JSONEncoder
@@ -36,11 +50,9 @@ final class ProfileManager: ObservableObject {
     private var layoutGeneration: UInt = 0
 
     /// Hotkeys for switching to each profile, keyed by profile ID.
-    @Published private(set) var profileHotkeys: [UUID: Hotkey] = [:]
+    private(set) var profileHotkeys: [UUID: Hotkey] = [:]
     /// Maps Hotkey identity to profile ID for the perform() lookup.
     var hotkeyProfileMap: [ObjectIdentifier: UUID] = [:]
-    /// Observers for profile hotkey changes.
-    private var profileHotkeyCancellables = Set<AnyCancellable>()
 
     /// - Parameter profilesDirectory: Where profile JSON and the manifest
     ///   live. Defaults to Application Support in production; tests pass a
@@ -83,14 +95,9 @@ final class ProfileManager: ObservableObject {
         lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
 
-        // Rebuild profile hotkeys when the profile list changes.
-        $profiles
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.rebuildProfileHotkeys()
-            }
-            .store(in: &cancellables)
+        // Note: profiles' didSet already calls rebuildProfileHotkeys() for
+        // every assignment after this class's own init, so no explicit
+        // subscription is needed here (see the doc comment on `profiles`).
 
         // Listen for display changes to trigger auto-switch.
         NotificationCenter.default
@@ -446,11 +453,12 @@ final class ProfileManager: ObservableObject {
             }
         }
 
-        // Apply display configurations
-        appState.settings.displaySettings.configurations = profile.displayConfigurations
-
-        // Apply global display configuration template
+        // configurations.didSet derives active-display spacing synchronously,
+        // so install its global fallback before the per-display overrides.
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
+
+        // Apply display configurations.
+        appState.settings.displaySettings.configurations = profile.displayConfigurations
 
         // Apply the spacing-relaunch confirmation preferences
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
@@ -481,11 +489,32 @@ final class ProfileManager: ObservableObject {
     }
 
     /// Deletes a profile by its identifier.
+    /// Deletes a profile by its identifier.
+    ///
+    /// A profile file that is already absent is treated as success: the
+    /// manifest entry is still removed. Leaving the entry behind would have
+    /// made the profile permanently undeletable, since a subsequent attempt
+    /// would throw on the same missing file.
     func deleteProfile(id: UUID) throws {
         let url = profileURL(for: id)
-        try FileManager.default.removeItem(at: url)
+
+        var removalError: Error?
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch let error as CocoaError where error.code == .fileNoSuchFile {
+            diagLog.debug(
+                "deleteProfile: file already absent for \(id), removing manifest entry anyway"
+            )
+        } catch {
+            removalError = error
+        }
+
         profiles.removeAll { $0.id == id }
         saveManifest()
+
+        if let removalError {
+            throw removalError
+        }
     }
 
     /// Renames a profile.
@@ -917,7 +946,6 @@ final class ProfileManager: ObservableObject {
             hotkey.disable()
         }
         hotkeyProfileMap.removeAll()
-        profileHotkeyCancellables.removeAll()
 
         // Clean up orphaned hotkey entries for deleted profiles.
         let profileIDs = Set(profiles.map(\.id.uuidString))
@@ -953,24 +981,23 @@ final class ProfileManager: ObservableObject {
             // Map this hotkey to its profile ID for the perform() lookup.
             hotkeyProfileMap[ObjectIdentifier(hotkey)] = profileID
 
-            // Observe future changes from HotkeyRecorder.
-            hotkey.$keyCombination
-                .dropFirst() // Skip the initial value we just set.
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] newCombo in
-                    guard let self else { return }
-                    // Persist.
-                    var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
-                    if let combo = newCombo, let data = try? enc.encode(combo) {
-                        dict[profileID.uuidString] = data
-                    } else {
-                        dict.removeValue(forKey: profileID.uuidString)
-                    }
-                    Defaults.set(dict, forKey: .profileHotkeys)
-                    // Update the hotkey→profile mapping.
-                    self.hotkeyProfileMap[ObjectIdentifier(hotkey)] = newCombo != nil ? profileID : nil
+            // Observe future changes from HotkeyRecorder. Assigned after the
+            // initial keyCombination is set above, so — like the previous
+            // dropFirst() Combine pipeline — the initial value is never
+            // redundantly persisted.
+            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
+                guard let self, let hotkey else { return }
+                // Persist.
+                var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
+                if let combo = hotkey.keyCombination, let data = try? enc.encode(combo) {
+                    dict[profileID.uuidString] = data
+                } else {
+                    dict.removeValue(forKey: profileID.uuidString)
                 }
-                .store(in: &profileHotkeyCancellables)
+                Defaults.set(dict, forKey: .profileHotkeys)
+                // Update the hotkey→profile mapping.
+                self.hotkeyProfileMap[ObjectIdentifier(hotkey)] = hotkey.keyCombination != nil ? profileID : nil
+            }
 
             newHotkeys[meta.id] = hotkey
         }

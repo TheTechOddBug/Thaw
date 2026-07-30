@@ -9,7 +9,7 @@
 import Foundation
 import SwiftUI
 
-enum Defaults {
+nonisolated enum Defaults {
     /// Returns a dictionary containing the keys and values for
     /// the defaults meant to be seen by all applications.
     static var globalDomain: [String: Any] {
@@ -139,7 +139,7 @@ enum Defaults {
     }
 }
 
-extension Defaults {
+nonisolated extension Defaults {
     enum DefaultValue {
         // MARK: General Settings
 
@@ -171,7 +171,7 @@ extension Defaults {
         static let showOnHoverDelay: TimeInterval = 0.2
         static let tooltipDelay: TimeInterval = 0.5
         static let showMenuBarTooltips = false
-        static let iconRefreshInterval: TimeInterval = 0.1
+        static let iconRefreshInterval: TimeInterval = 0.25
         #if DEBUG
             static let enableDiagnosticLogging = true
         #else
@@ -181,6 +181,8 @@ extension Defaults {
         static let useOptionClickToShowAlwaysHiddenSection = false
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
+        static let useThawBarOnNotchOverflow = true
+        static let useAXClickDelivery = false
 
         // MARK: Search
 
@@ -204,10 +206,17 @@ extension Defaults {
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
         static let confirmSpacingRelaunch = true
         static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
+
+        // MARK: Hidden Diagnostic Flags
+
+        static let inputPauseThresholdMs = 50
+        static let discardStrayMoveEvents = true
+        static let failFastOnEventWindowMismatch = false
+        static let axMessagingTimeout = SharedConstants.axMessagingTimeout
     }
 }
 
-extension Defaults {
+nonisolated extension Defaults {
     enum Key: String {
         // MARK: General Settings
 
@@ -256,6 +265,8 @@ extension Defaults {
         case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
+        case useThawBarOnNotchOverflow = "UseThawBarOnNotchOverflow"
+        case useAXClickDelivery = "UseAXClickDelivery"
 
         // MARK: Search
 
@@ -274,18 +285,25 @@ extension Defaults {
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
 
+        // MARK: Internal (Event Delivery)
+
+        /// Items whose owners have recently failed to answer synthetic
+        /// events, keyed by namespace and title. Managed by
+        /// ``UnresponsiveItemStore``; not exposed in Settings.
+        case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
+
+        /// The app build the persisted unresponsive-item marks were recorded
+        /// against. A change drops the marks, so a fix that makes a
+        /// previously stuck item movable is not hidden behind the two-week
+        /// mark lifetime. Managed by ``MenuBarItemFailureLedger``.
+        case unresponsiveMenuBarItemsBuild = "UnresponsiveMenuBarItemsBuild"
+
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"
 
         // MARK: Migration
 
-        case hasMigrated0_8_0
-        case hasMigrated0_10_0
-        case hasMigrated0_10_1
-        case hasMigrated0_11_10
-        case hasMigrated0_11_13
-        case hasMigrated0_11_13_1
         case hasMigratedPerDisplayIceBar
 
         // MARK: First Launch
@@ -311,27 +329,33 @@ extension Defaults {
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
 
-        // MARK: Deprecated (Appearance Settings)
+        // MARK: Hidden Diagnostic Flags
 
-        case menuBarHasBorder = "MenuBarHasBorder"
-        case menuBarBorderColor = "MenuBarBorderColor"
-        case menuBarBorderWidth = "MenuBarBorderWidth"
-        case menuBarHasShadow = "MenuBarHasShadow"
-        case menuBarTintKind = "MenuBarTintKind"
-        case menuBarTintColor = "MenuBarTintColor"
-        case menuBarTintGradient = "MenuBarTintGradient"
-        case menuBarShapeKind = "MenuBarShapeKind"
-        case menuBarFullShapeInfo = "MenuBarFullShapeInfo"
-        case menuBarSplitShapeInfo = "MenuBarSplitShapeInfo"
-        case menuBarAppearanceConfiguration = "MenuBarAppearanceConfiguration"
+        /// Milliseconds of input inactivity required before a menu-bar item
+        /// reorder move proceeds.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 50.
+        case inputPauseThresholdMs = "inputPauseThresholdMs"
 
-        // MARK: Deprecated (Advanced Settings)
+        /// Whether stray echoes of synthetic move events are discarded
+        /// before they can be delivered against the wrong window.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
+        case discardStrayMoveEvents = "discardStrayMoveEvents"
 
-        case showSectionDividers = "ShowSectionDividers"
-        case canToggleAlwaysHiddenSection = "CanToggleAlwaysHiddenSection"
+        /// Whether a synthetic event that comes back addressed to a
+        /// different window than it was posted with fails its operation
+        /// immediately rather than running to timeout.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        case failFastOnEventWindowMismatch = "failFastOnEventWindowMismatch"
 
-        // MARK: Deprecated (Other)
-
-        case sections = "Sections"
+        /// Seconds an accessibility message may block before it fails.
+        ///
+        /// Applied to every element AXSwift6 creates. `0` restores the
+        /// system default of six seconds.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.
+        case axMessagingTimeout = "axMessagingTimeout"
     }
 }

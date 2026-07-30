@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@preconcurrency import AXSwift
+import AXSwift6
 import Cocoa
 import Combine
 import os
@@ -24,7 +24,22 @@ import os
 /// Accessibility are thread blocking, we do most of the heavy lifting
 /// in a dedicated XPC service, which we then call asynchronously from
 /// the main app.
-final class SourcePIDCache {
+///
+/// This type is an `actor`. Only the Combine observer wiring in
+/// `start()` (and its backing `cancellable` lazy var) is actually
+/// actor-isolated — that state had no synchronization of its own
+/// before this conversion. Everything else (`state`, `scanLock`, and
+/// the `CachedApplication` cache entries) was already protected by its
+/// own `OSAllocatedUnfairLock`, so those members and the methods that
+/// only touch them are marked `nonisolated`. This preserves the exact
+/// pre-actor concurrency semantics: cache-hit reads in `pidBody` can
+/// still proceed without waiting on an in-flight full AX scan, and
+/// `scanLock` (not actor isolation) is still what serializes full
+/// scans across concurrent callers. Making these methods actor-isolated
+/// instead would have serialized *all* calls — including fast
+/// cache-hit checks — behind any long-running blocking AX scan, which
+/// would have been a behavior change, not just a safety upgrade.
+actor SourcePIDCache {
     private static let diagLog = DiagLog(category: "SourcePIDCache")
     /// An object that contains a running application and provides an
     /// interface to access relevant information, such as its process
@@ -137,6 +152,13 @@ final class SourcePIDCache {
         var apps = [CachedApplication]()
         var pids = [CGWindowID: pid_t]()
 
+        /// Window IDs a full scan failed to resolve, mapped to the deadline
+        /// after which they may initiate a new scan. A negative entry gates
+        /// scan initiation only: a scan started for another window still
+        /// retries every unresolved window, so late-arriving markers are
+        /// discovered immediately.
+        var negativeUntil = [CGWindowID: ContinuousClock.Instant]()
+
         /// Reorders the cached apps so that those that are confirmed
         /// to have an extras menu bar are first in the array.
         mutating func partitionApps() {
@@ -156,13 +178,38 @@ final class SourcePIDCache {
     }
 
     /// The shared cache.
-    static nonisolated(unsafe) let shared = SourcePIDCache()
+    static let shared = SourcePIDCache()
+
+    /// How long an unresolved window is barred from initiating a new scan.
+    private static let negativeCacheTTL: Duration = .seconds(60)
+
+    /// Minimum interval between unresolved-diagnostic dumps for an unchanged
+    /// unresolved set. The dump re-walks every app's AX tree, so repeating it
+    /// can add seconds of IPC without yielding new information.
+    private static let unresolvedDiagDumpInterval: Duration = .seconds(300)
+
+    /// Rate-limits unresolved diagnostic dumps. Kept in its own lock because
+    /// `pidBody` (which emits diagnostics under `scanLock`) is `nonisolated`
+    /// and cannot touch actor-isolated storage. Concurrent access is still
+    /// serialized in practice by `scanLock` around the dump site.
+    private nonisolated let lastUnresolvedDiagDump = OSAllocatedUnfairLock<
+        (windowIDs: Set<CGWindowID>, at: ContinuousClock.Instant)?
+    >(initialState: nil)
 
     /// The cache's protected state.
-    private let state = OSAllocatedUnfairLock(initialState: State())
+    ///
+    /// `nonisolated`: this is already synchronized by its own
+    /// `OSAllocatedUnfairLock` and does not need actor isolation on
+    /// top of that. Keeping it `nonisolated` lets fast cache-hit reads
+    /// run without waiting for the actor even while `start()`/cleanup
+    /// (which remain actor-isolated) are in flight.
+    private nonisolated let state = OSAllocatedUnfairLock(initialState: State())
 
     /// Lock to prevent multiple concurrent full scans of all applications.
-    private let scanLock = OSAllocatedUnfairLock(initialState: ())
+    ///
+    /// `nonisolated` for the same reason as `state` above — it is the
+    /// mechanism (not actor isolation) that serializes full AX scans.
+    private nonisolated let scanLock = OSAllocatedUnfairLock(initialState: ())
 
     /// Observer for running applications.
     private lazy var cancellable: AnyCancellable = {
@@ -185,13 +232,13 @@ final class SourcePIDCache {
     }
 
     /// Performs cleanup of the cache state.
-    private func performCleanup() {
+    private nonisolated func performCleanup() {
         autoreleasepool {
             performCleanupBody()
         }
     }
 
-    private func performCleanupBody() {
+    private nonisolated func performCleanupBody() {
         let runningApps = NSWorkspace.shared.runningApplications
         SourcePIDCache.diagLog.debug("Performing PID cache cleanup")
 
@@ -223,6 +270,12 @@ final class SourcePIDCache {
             // releasing the lock.
             var reused = [CachedApplication]()
 
+            // Preserve unexpired negative entries across cleanup. Dropping
+            // them would let a known-unresolvable window start a full scan
+            // immediately after every application-list update.
+            let now = ContinuousClock.now
+            let carriedNegativeUntil = state.negativeUntil.filter { $0.value > now }
+
             // Create a new state that matches the current running apps.
             state = runningApps.reduce(into: State()) { result, app in
                 let pid = app.processIdentifier
@@ -243,6 +296,7 @@ final class SourcePIDCache {
                     }
                 }
             }
+            state.negativeUntil = carriedNegativeUntil
 
             // Log cleanup activity
             if !terminatedPids.isEmpty {
@@ -267,7 +321,7 @@ final class SourcePIDCache {
 
     /// Returns the cached process identifier for the given window,
     /// updating the cache if needed.
-    func pid(for window: WindowInfo) -> pid_t? {
+    nonisolated func pid(for window: WindowInfo) -> pid_t? {
         // Wrap the entire request in an autoreleasepool. This XPC service
         // has no NSApplication, so autoreleased ObjC/CF objects from
         // WindowInfo creation, AX API calls, and CGS bridging would
@@ -282,13 +336,13 @@ final class SourcePIDCache {
     ///
     /// `pidBody` already caches **all** matched windows during its full
     /// AX scan, so after one call all resolvable PIDs are available.
-    func pids(for windows: [WindowInfo]) -> [pid_t?] {
+    nonisolated func pids(for windows: [WindowInfo]) -> [pid_t?] {
         autoreleasepool {
             pidsBody(for: windows)
         }
     }
 
-    private func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
+    private nonisolated func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
         // Drive the scan via an unresolved window in the batch, not via
         // `windows.first`. pidBody returns early on a cache hit (line 292),
         // so passing a cached window skips the AX traversal entirely.
@@ -298,9 +352,8 @@ final class SourcePIDCache {
         // never getting a scan: the first window in their batch was always
         // an already-cached resolved one, and the scan only ever ran at
         // session start.
-        if let unresolved = windows.first(where: { window in
-            state.withLock { $0.pids[window.windowID] == nil }
-        }) {
+        let now = ContinuousClock.now
+        if let unresolved = windows.first(where: { couldLearnFromScan($0, now: now) }) {
             _ = pidBody(for: unresolved)
         }
         return windows.map { window in
@@ -308,10 +361,35 @@ final class SourcePIDCache {
         }
     }
 
-    private func pidBody(for window: WindowInfo) -> pid_t? {
+    /// Whether a scan could still learn something about `window`: it has no
+    /// cached PID, and it is not sitting inside a negative-cache shadow from
+    /// an earlier scan that already failed to resolve it.
+    private nonisolated func couldLearnFromScan(
+        _ window: WindowInfo,
+        now: ContinuousClock.Instant
+    ) -> Bool {
+        state.withLock { state in
+            guard state.pids[window.windowID] == nil else {
+                return false
+            }
+            guard let deadline = state.negativeUntil[window.windowID] else {
+                return true
+            }
+            return deadline <= now
+        }
+    }
+
+    private nonisolated func pidBody(for window: WindowInfo) -> pid_t? {
         if let pid = state.withLock({ $0.pids[window.windowID] }) {
             SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache hit for windowID \(window.windowID) -> PID \(pid)")
             return pid
+        }
+
+        if let deadline = state.withLock({ $0.negativeUntil[window.windowID] }),
+           deadline > ContinuousClock.now
+        {
+            SourcePIDCache.diagLog.debug("SourcePIDCache.pid: negative cache hit for windowID \(window.windowID), skipping scan")
+            return nil
         }
 
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache miss for windowID \(window.windowID) title=\(window.title ?? "nil"), acquiring scan lock")
@@ -322,10 +400,16 @@ final class SourcePIDCache {
         defer { scanLock.unlock() }
 
         // Re-check cache after acquiring the scan lock, as it may have been populated
-        // by another thread that just finished a full scan.
+        // or negative-cached by another thread that just finished a full scan.
         if let pid = state.withLock({ $0.pids[window.windowID] }) {
             SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache hit after scan lock for windowID \(window.windowID) -> PID \(pid)")
             return pid
+        }
+        if let deadline = state.withLock({ $0.negativeUntil[window.windowID] }),
+           deadline > ContinuousClock.now
+        {
+            SourcePIDCache.diagLog.debug("SourcePIDCache.pid: negative cache hit after scan lock for windowID \(window.windowID), skipping scan")
+            return nil
         }
 
         let isTrusted = AXHelpers.isProcessTrusted()
@@ -389,12 +473,15 @@ final class SourcePIDCache {
                     // CC-hosted; it does not identify the owning app. Writing
                     // Control Center's PID would tag the item as a transient CC
                     // widget (isTransientControlCenterItem true, canBeHidden
-                    // false), hiding it from profile management and the
-                    // virtual-display provoke's orphan scan. Leaving it
+                    // false), hiding it from profile management. Leaving it
                     // unresolved lets the marker-pair pass below supply the real
                     // owner PID; named CC items (BentoBox-0, Clock, WiFi,
                     // NowPlaying) carry non-generic titles and resolve to Control
                     // Center normally.
+                    //
+                    // On a single display the marker windows may never publish,
+                    // in which case the item stays unresolved for the session.
+                    // Accepted: a permanent mislabel is worse than no owner.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
                     }), !MarkerPairResolver.isCCHostedGenericSlot(
@@ -489,6 +576,7 @@ final class SourcePIDCache {
         // to prevent misattribution. Thaw's own control items and
         // self-registration windows are excluded so Thaw's PID can
         // never be attributed to a third-party widget.
+        var markerWindowIDs = Set<CGWindowID>()
         if !unresolvedWindows.isEmpty {
             let thawBundleID = "com.stonerl.Thaw"
             let markers = MarkerPairResolver.extractMarkers(
@@ -503,6 +591,7 @@ final class SourcePIDCache {
                 thawControlItemPrefix: "Thaw.ControlItem.",
                 thawBundleID: thawBundleID
             )
+            markerWindowIDs = Set(markers.map(\.windowID))
             let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
             let icons = unresolvedInfos.map { win in
                 MarkerPairResolver.UnresolvedIcon(
@@ -535,8 +624,52 @@ final class SourcePIDCache {
             }
         }
 
+        // Title-identity fallback for parked (off-screen) items.
+        //
+        // The spatial passes need an AX child near the CG window and the
+        // marker-pair pass only considers on-screen icons, so a widget whose
+        // window title is its own bundle identifier (Little Snitch's agent)
+        // becomes unresolvable the moment it is parked at off-screen
+        // coordinates — and an unresolvable hidden item can never be matched
+        // back to its saved section. An exact title == bundle-identifier
+        // match against a running application is direct ownership evidence
+        // that needs no geometry; the reverse-DNS shape requirement keeps
+        // generic slot titles (Item-0) away from the lookup.
+        let unresolvedInfos = allWindows.filter {
+            unresolvedWindows.contains($0.windowID) && !markerWindowIDs.contains($0.windowID)
+        }
+        for window in unresolvedInfos {
+            guard let title = window.title,
+                  title.split(separator: ".").count >= 3,
+                  let pid = NSRunningApplication
+                      .runningApplications(withBundleIdentifier: title)
+                      .first?
+                      .processIdentifier
+            else { continue }
+            SourcePIDCache.diagLog.info(
+                "SourcePIDCache title-identity resolution: windowID=\(window.windowID) → PID \(pid) (title=\(title))"
+            )
+            state.withLock { $0.pids[window.windowID] = pid }
+            unresolvedWindows.remove(window.windowID)
+            totalMatchesFound += 1
+        }
+
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
+
+        // Negative-cache every window that survived the full scan unresolved.
+        // Expired entries are pruned on the same write to bound the dictionary.
+        if !unresolvedWindows.isEmpty {
+            let now = ContinuousClock.now
+            let deadline = now + Self.negativeCacheTTL
+            let unresolvedSnapshot = unresolvedWindows
+            state.withLock { state in
+                state.negativeUntil = state.negativeUntil.filter { $0.value > now }
+                for windowID in unresolvedSnapshot {
+                    state.negativeUntil[windowID] = deadline
+                }
+            }
+        }
 
         // Diagnostic dump for unresolved windows.
         //
@@ -552,8 +685,23 @@ final class SourcePIDCache {
         //
         // Quiet path on normal cycles where every window resolves.
         // The diagnostic re-walks AX children, which can be expensive,
-        // so it only fires when there is actual unresolved state.
+        // so it only fires when there is actual unresolved state—and no more
+        // than once per interval for the same unresolved set.
+        var shouldDumpUnresolvedDiagnostics = false
         if !unresolvedWindows.isEmpty {
+            let unresolvedSnapshot = unresolvedWindows
+            shouldDumpUnresolvedDiagnostics = lastUnresolvedDiagDump.withLock { last in
+                if let last {
+                    return last.windowIDs != unresolvedSnapshot
+                        || ContinuousClock.now >= last.at + Self.unresolvedDiagDumpInterval
+                }
+                return true
+            }
+            if shouldDumpUnresolvedDiagnostics {
+                lastUnresolvedDiagDump.withLock { $0 = (unresolvedSnapshot, ContinuousClock.now) }
+            }
+        }
+        if shouldDumpUnresolvedDiagnostics {
             SourcePIDCache.diagLog.debug(
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )

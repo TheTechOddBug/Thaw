@@ -26,7 +26,10 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 
@@ -39,7 +42,10 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 
@@ -51,7 +57,10 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 
@@ -64,7 +73,10 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 
@@ -78,7 +90,10 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 
@@ -94,7 +109,29 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: false
+            temporarilyShownItemContextsIsEmpty: false,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
+        ))
+    }
+
+    /// A pending layout divergence blocks the save: applySavedLayout
+    /// observed a divergence on this cycle but is waiting for a second
+    /// consecutive confirmation before correcting it. The current cache
+    /// reflects a transient macOS rebuild (e.g. a space switch
+    /// re-exposing hidden items as visible); persisting it now would
+    /// bake that transient state into the saved layout (#736).
+    func testPendingDivergenceBlocks() {
+        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: false,
+            isResettingLayout: false,
+            isInStartupSettling: false,
+            isApplyingProfileLayout: false,
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: true
         ))
     }
 
@@ -107,14 +144,20 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: false,
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true,
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 }
