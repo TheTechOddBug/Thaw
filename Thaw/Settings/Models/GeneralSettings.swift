@@ -179,7 +179,12 @@ final class GeneralSettings {
     private(set) weak var appState: AppState?
 
     /// Performs the initial setup of the model.
-    func performSetup(with appState: AppState) {
+    ///
+    /// The app state is only stored, never read, by this model: the setup it
+    /// performs is reading `Defaults` and subscribing to the Settings-URI
+    /// notification. The parameter is optional so that setup can be driven
+    /// without standing up an ``AppState``; the app always passes one.
+    func performSetup(with appState: AppState? = nil) {
         self.appState = appState
         loadInitialState()
         configureObservers()
