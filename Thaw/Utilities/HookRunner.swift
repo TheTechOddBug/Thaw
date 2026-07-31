@@ -157,15 +157,28 @@ enum HookRunner {
         let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
         // Cancelling the subprocess runs this teardown sequence against the
-        // process Subprocess launched. Note that it reaches *that* process
-        // only: a `#!/bin/sh` wrapper does not forward the signal to its own
-        // child and then waits for it, so the signal alone cannot bound how
-        // long the hook keeps running. That is why the wait below is bounded
-        // separately rather than relying on teardown to end it.
+        // hook's whole process group, which is what bounds the run: a
+        // `#!/bin/sh` wrapper does not forward a signal to its own child and
+        // then wait for it, so signalling the wrapper alone left the real work
+        // running. Targeting the group reaches those descendants, and the
+        // implicit final kill that closes every sequence inherits the group
+        // from the last explicit step.
+        //
+        // `createSession` is not optional here. Without it the hook stays in
+        // Thaw's own process group, and a group-targeted signal would be
+        // delivered to Thaw as well.
+        //
+        // The signal is SIGTERM rather than SIGINT because a non-interactive
+        // `sh` starts background jobs with SIGINT ignored: `sleep 30 &`
+        // survived it while `sh` itself died, and Subprocess ends the sequence
+        // as soon as the process it launched exits, so the kill that closes
+        // the sequence never got the chance to run. A descendant that traps
+        // SIGTERM can still outlive the run for the same reason.
         let platformOptions: PlatformOptions = {
             var options = PlatformOptions()
+            options.createSession = true
             options.teardownSequence = [
-                .send(signal: .interrupt, allowedDurationToNextStep: .seconds(1)),
+                .send(signal: .terminate, toProcessGroup: true, allowedDurationToNextStep: .seconds(1)),
             ]
             return options
         }()
