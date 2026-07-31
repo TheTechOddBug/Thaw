@@ -108,45 +108,91 @@ enum SettingsURIHandler {
 
     // MARK: - Security
 
-    /// Gets the team identifier for a bundle ID by checking the app's code signature.
-    private static func getTeamIdentifier(for bundleId: String) -> String? {
+    /// The outcome of reading an app's code-signing team identifier.
+    ///
+    /// A bare optional cannot tell an app that is validly signed without a team
+    /// from an app that could not be located or inspected at all, and those two
+    /// must not be treated alike when verifying a whitelist entry.
+    enum TeamIdentifierLookup: Equatable {
+        /// The app resolved and its signature names this team identifier.
+        case team(String)
+
+        /// The app resolved and its signature was read, but names no team
+        /// identifier — an ad-hoc signed build, or an Apple platform binary.
+        case noTeamIdentifier
+
+        /// The app could not be resolved, or its signature could not be read,
+        /// so nothing at all is known about its identity.
+        case unavailable
+
+        /// The team identifier, when the signature named one.
+        var teamIdentifier: String? {
+            guard case let .team(identifier) = self else {
+                return nil
+            }
+            return identifier
+        }
+    }
+
+    /// Reads the team identifier for a bundle ID from the app's code signature.
+    static func lookUpTeamIdentifier(for bundleId: String) -> TeamIdentifierLookup {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
             diagLog.debug("Settings URI: Cannot find app URL for \(bundleId)")
-            return nil
+            return .unavailable
         }
 
         var staticCode: SecStaticCode?
         let createStatus = SecStaticCodeCreateWithPath(appURL as CFURL, [], &staticCode)
         guard createStatus == errSecSuccess, let code = staticCode else {
             diagLog.debug("Settings URI: Failed to create static code for \(bundleId): \(createStatus)")
-            return nil
+            return .unavailable
         }
 
         var signingInfo: CFDictionary?
         let infoStatus = SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &signingInfo)
         guard infoStatus == errSecSuccess, let info = signingInfo as? [String: Any] else {
             diagLog.debug("Settings URI: Failed to get signing info for \(bundleId): \(infoStatus)")
-            return nil
+            return .unavailable
         }
 
         // Extract team identifier from signing info
         if let teamId = info[kSecCodeInfoTeamIdentifier as String] as? String {
-            return teamId
+            return .team(teamId)
         }
 
         diagLog.debug("Settings URI: No team identifier found for \(bundleId)")
-        return nil
+        return .noTeamIdentifier
+    }
+
+    /// Gets the team identifier for a bundle ID by checking the app's code signature.
+    private static func getTeamIdentifier(for bundleId: String) -> String? {
+        return lookUpTeamIdentifier(for: bundleId).teamIdentifier
     }
 
     /// Verifies that an app's current code signature matches the stored signing identity.
     private static func verifyCodeSignature(bundleId: String, storedTeamId: String?) -> Bool {
+        let lookup = lookUpTeamIdentifier(for: bundleId)
+
         // If no stored team ID, only allow if app is also unsigned (legacy entries)
         guard let storedTeamId else {
-            let currentTeamId = getTeamIdentifier(for: bundleId)
-            return currentTeamId == nil
+            switch lookup {
+            case .noTeamIdentifier:
+                return true
+            case .team:
+                diagLog.warning("Settings URI: App \(bundleId) is now signed but was authorized as unsigned")
+                return false
+            case .unavailable:
+                // An app that cannot be located reads exactly like the unsigned
+                // app the legacy entry was created for, so it is refused rather
+                // than assumed to be that app: a bundle ID is self-reported and
+                // anything can claim one that resolves to nothing. Approving the
+                // authorization prompt again lets the request through.
+                diagLog.warning("Settings URI: Cannot read the signing identity of \(bundleId); refusing unsigned legacy entry")
+                return false
+            }
         }
 
-        guard let currentTeamId = getTeamIdentifier(for: bundleId) else {
+        guard case let .team(currentTeamId) = lookup else {
             diagLog.warning("Settings URI: App \(bundleId) is unsigned but was authorized with team ID")
             return false
         }
@@ -249,19 +295,34 @@ enum SettingsURIHandler {
     /// Adds a bundle ID to the whitelist with its signing identity.
     static func addToWhitelist(bundleId: String, teamIdentifier: String? = nil) {
         var whitelist = Defaults.stringArray(forKey: .settingsURIWhitelist) ?? []
-        guard !whitelist.contains(bundleId) else { return }
+        let isNewEntry = !whitelist.contains(bundleId)
 
-        whitelist.append(bundleId)
-        Defaults.set(whitelist, forKey: .settingsURIWhitelist)
+        if isNewEntry {
+            whitelist.append(bundleId)
+            Defaults.set(whitelist, forKey: .settingsURIWhitelist)
+        }
 
-        // Store signing identity if available
-        if let teamId = teamIdentifier {
-            var identities = getSigningIdentities()
+        // Store signing identity if available. Re-authorizing an app that is
+        // already listed still has to record it: an entry stored without an
+        // identity would otherwise never heal, and keeps being verified against
+        // the far weaker unsigned-legacy rule.
+        var identities = getSigningIdentities()
+        let isNewIdentity = teamIdentifier != nil && identities[bundleId] != teamIdentifier
+        if let teamId = teamIdentifier, isNewIdentity {
             identities[bundleId] = teamId
             saveSigningIdentities(identities)
         }
 
-        diagLog.info("Settings URI: Added \(bundleId) to whitelist (team: \(teamIdentifier ?? "unsigned"))")
+        // Nothing was stored, so there is nothing for observers to reload.
+        guard isNewEntry || isNewIdentity else {
+            return
+        }
+
+        if isNewEntry {
+            diagLog.info("Settings URI: Added \(bundleId) to whitelist (team: \(teamIdentifier ?? "unsigned"))")
+        } else {
+            diagLog.info("Settings URI: Recorded signing identity for \(bundleId) (team: \(teamIdentifier ?? "unsigned"))")
+        }
         NotificationCenter.default.post(name: .settingsURIWhitelistDidChange, object: nil)
     }
 
@@ -810,7 +871,14 @@ enum SettingsURIHandler {
                 "status": "ack",
                 "message": "Use callback URL to receive full settings data",
             ]
-            return sendBroadcastResponse(response: ackResponse)
+            let delivered = sendBroadcastResponse(response: ackResponse)
+
+            // The acknowledgement is a fixed shape that carries no error detail,
+            // so a request that produced no data has to be reported through the
+            // return value instead of being masked by a delivered ack — same
+            // signal the callback path gives the dispatcher.
+            let requestFailed = response["status"] as? String == "error"
+            return delivered && !requestFailed
         }
 
         return false
