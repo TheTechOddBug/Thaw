@@ -81,9 +81,18 @@ final class HotkeysSettings {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 do {
-                    let data = try encoder.encode(hotkey.keyCombination)
+                    // Encoding the optional directly turns a cleared binding
+                    // into the JSON literal `null` and stores it, leaving a
+                    // dead entry behind for a hotkey the user just unbound.
+                    // Remove the key instead, so the dictionary only ever
+                    // holds bindings that actually exist.
+                    let data = try hotkey.keyCombination.map { try encoder.encode($0) }
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
-                        dictionary[hotkey.action.rawValue] = data
+                        if let data {
+                            dictionary[hotkey.action.rawValue] = data
+                        } else {
+                            dictionary.removeValue(forKey: hotkey.action.rawValue)
+                        }
                         Defaults.set(dictionary, forKey: .hotkeys)
                     }
                 } catch {
