@@ -204,6 +204,26 @@ nonisolated enum MouseHelpers {
         }
     }
 
+    /// Returns the cursor to `point` after an operation that moved it.
+    ///
+    /// - IMPORTANT: This used to prefer the user's own cursor position when
+    ///   they moved the mouse mid-operation, reading the suspension state
+    ///   `dece1d11` added. `fe4db99b` ("refactor(swift6): replace remaining
+    ///   pre-Swift-6 GCD and Timer patterns") deleted that state along with
+    ///   the activity monitor, but left this function's four callers in
+    ///   `MenuBarItemManager` behind — the branch did not compile. This
+    ///   restores the symbol with the only behavior the remaining state can
+    ///   support, an unconditional warp, so the call sites keep working.
+    ///   Whether to restore the user-activity suspension is a separate
+    ///   decision; until then the comments at those call sites about the
+    ///   user's position winning describe behavior that is not present.
+    ///
+    /// - Parameter point: The point to move the cursor to in global
+    ///   display coordinates.
+    static func restoreCursorPosition(to point: CGPoint) {
+        warpCursor(to: point)
+    }
+
     /// Connects or disconnects the positions of the mouse and cursor.
     ///
     /// - Parameter connected: A Boolean value that determines whether

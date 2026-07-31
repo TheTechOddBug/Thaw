@@ -163,4 +163,3 @@ $(SRCROOT)/Thaw/Utilities/SettingsURIParser.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift
 $(SRCROOT)/Thaw/Utilities/SystemAppearance.swift
-$(SRCROOT)/Thaw/VirtualDisplay/VirtualDisplayProvoker.swift
