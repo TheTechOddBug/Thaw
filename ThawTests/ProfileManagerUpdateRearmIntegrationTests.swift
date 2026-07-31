@@ -6,8 +6,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// End-to-end regression lock for the update-re-arms-cache wiring.
 ///
@@ -17,13 +18,34 @@ import XCTest
 /// re-arms the in-memory cache. This is the integration the gate test and the
 /// MenuBarItemManager cache test could not reach on their own. It fails if the
 /// rearm wiring is removed from updateProfileLayout.
+///
+/// Serialized because it writes `MenuBarItemManager.savedSectionOrder` into
+/// `UserDefaults.standard`, which every other settings suite also reads.
 @MainActor
-final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
+@Suite("Profile manager update re-arm integration", .serialized)
+final class ProfileManagerRearmIntegrationTests {
     private let savedSectionOrderKey = "MenuBarItemManager.savedSectionOrder"
 
-    override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: savedSectionOrderKey)
-        super.tearDown()
+    /// The developer's own saved layout, captured before the test overwrites
+    /// it. `MenuBarItemManager` writes this key straight to
+    /// `UserDefaults.standard`, and the test host runs as the real app bundle,
+    /// so tearing down by removing the key deleted whatever menu bar
+    /// arrangement the developer actually had.
+    private let savedSectionOrderSnapshot: Any?
+
+    init() {
+        savedSectionOrderSnapshot = UserDefaults.standard.object(forKey: savedSectionOrderKey)
+    }
+
+    /// Isolated so the non-Sendable snapshot is reachable here; the suite is
+    /// already `@MainActor`.
+    @MainActor
+    deinit {
+        if let savedSectionOrderSnapshot {
+            UserDefaults.standard.set(savedSectionOrderSnapshot, forKey: savedSectionOrderKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: savedSectionOrderKey)
+        }
     }
 
     /// A profile is active with an item in Always-Hidden, the user moves it to
@@ -32,7 +54,8 @@ final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
     /// so a later late-arrival re-sort no longer drags the item back into
     /// Always-Hidden. Without the re-arm wiring the cache stays on the
     /// Always-Hidden spec and this fails.
-    func testUpdatingActiveProfileLayoutRearmsCacheEndToEnd() throws {
+    @Test("Updating the active profile's layout re-arms the cache end to end")
+    func updatingActiveProfileLayoutRearmsCacheEndToEnd() throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let profileManager = ProfileManager(profilesDirectory: tmp)
@@ -54,9 +77,8 @@ final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
             itemSectionMap: [uid: "alwaysHidden"],
             itemOrder: ["alwaysHidden": [uid]]
         )
-        XCTAssertEqual(
-            itemManager.activeProfileLayout?.sectionOrder,
-            ["alwaysHidden": [uid]],
+        #expect(
+            itemManager.activeProfileLayout?.sectionOrder == ["alwaysHidden": [uid]],
             "Precondition: cache reflects the applied (Always-Hidden) spec"
         )
 
@@ -68,9 +90,8 @@ final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
 
         // The cache now reflects Hidden, so the next late-arrival re-sort
         // targets the updated layout instead of reverting to Always-Hidden.
-        XCTAssertEqual(
-            itemManager.activeProfileLayout?.sectionOrder,
-            ["hidden": [uid]],
+        #expect(
+            itemManager.activeProfileLayout?.sectionOrder == ["hidden": [uid]],
             "Updating the active profile must re-arm the cache to the new layout"
         )
     }
@@ -78,7 +99,8 @@ final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
     /// Updating a profile that is not the active one must not touch the cache,
     /// even end-to-end: the disk write happens but the in-memory spec is left
     /// pointing at the active profile's layout.
-    func testUpdatingInactiveProfileDoesNotRearmCache() throws {
+    @Test("Updating an inactive profile leaves the cache alone")
+    func updatingInactiveProfileDoesNotRearmCache() throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let profileManager = ProfileManager(profilesDirectory: tmp)
@@ -103,9 +125,8 @@ final class ProfileManagerUpdateRearmIntegrationTests: XCTestCase {
         UserDefaults.standard.set(["hidden": [uid]], forKey: savedSectionOrderKey)
         try profileManager.updateProfileLayout(id: inactiveProfile.id, itemManager: itemManager)
 
-        XCTAssertEqual(
-            itemManager.activeProfileLayout?.sectionOrder,
-            ["alwaysHidden": [uid]],
+        #expect(
+            itemManager.activeProfileLayout?.sectionOrder == ["alwaysHidden": [uid]],
             "Updating a non-active profile must leave the active cache untouched"
         )
     }
