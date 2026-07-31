@@ -7431,8 +7431,7 @@ extension MenuBarItemManager {
             cursorRestored = true
             // savedCursorPosition is already in CoreGraphics coordinates, so
             // warp back directly with no AppKit→CG flip (and no dependence on
-            // which screen contains it). Skipped if the user grabbed the
-            // mouse mid-apply — their position wins over the saved one.
+            // which screen contains it).
             if let savedCursorPosition {
                 MouseHelpers.restoreCursorPosition(to: savedCursorPosition)
             }

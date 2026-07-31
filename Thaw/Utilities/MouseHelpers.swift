@@ -206,17 +206,13 @@ nonisolated enum MouseHelpers {
 
     /// Returns the cursor to `point` after an operation that moved it.
     ///
-    /// - IMPORTANT: This used to prefer the user's own cursor position when
-    ///   they moved the mouse mid-operation, reading the suspension state
-    ///   `dece1d11` added. `fe4db99b` ("refactor(swift6): replace remaining
-    ///   pre-Swift-6 GCD and Timer patterns") deleted that state along with
-    ///   the activity monitor, but left this function's four callers in
-    ///   `MenuBarItemManager` behind — the branch did not compile. This
-    ///   restores the symbol with the only behavior the remaining state can
-    ///   support, an unconditional warp, so the call sites keep working.
-    ///   Whether to restore the user-activity suspension is a separate
-    ///   decision; until then the comments at those call sites about the
-    ///   user's position winning describe behavior that is not present.
+    /// An unconditional warp, matching what these call sites did before the
+    /// cursor work landed and what `development` does today. A richer version
+    /// once preferred the user's own position when they moved the mouse
+    /// mid-operation, backed by a hide-suspension mechanism in this type; it
+    /// arrived with the macOS 27 backport (#811) and left with the revert of
+    /// that backport (#857), so it should return with #811 rather than on its
+    /// own.
     ///
     /// - Parameter point: The point to move the cursor to in global
     ///   display coordinates.
