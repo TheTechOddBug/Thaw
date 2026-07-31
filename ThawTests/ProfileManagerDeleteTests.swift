@@ -54,6 +54,12 @@ final class ProfileManagerDeleteTests: XCTestCase {
 
         XCTAssertNoThrow(try profileManager.deleteProfile(id: profile.id))
         XCTAssertFalse(profileManager.profiles.contains { $0.id == profile.id })
+
+        // The in-memory list is not the regression: the manifest on disk is.
+        // Reload from the same directory to prove the entry was persisted
+        // away, not just dropped from this instance.
+        let reloaded = ProfileManager(profilesDirectory: tmp)
+        XCTAssertFalse(reloaded.profiles.contains { $0.id == profile.id })
     }
 
     /// Calling `deleteProfile(id:)` twice in a row must not throw the

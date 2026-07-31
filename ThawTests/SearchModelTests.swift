@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 //
 
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -42,5 +43,44 @@ struct SearchModelTests {
         model.searchText = "  \n\t"
 
         #expect(model.displayedGroups.isEmpty)
+    }
+
+    /// The `de` localization inside the app bundle. `String(localized:)`
+    /// picks its localization from the bundle, not from its `locale:`
+    /// argument, so switching languages in-process means resolving against
+    /// the matching `.lproj`.
+    private static func localizationBundle(_ identifier: String) throws -> Bundle {
+        let path = try #require(Bundle.main.path(forResource: identifier, ofType: "lproj"))
+        return try #require(Bundle(path: path))
+    }
+
+    @Test("Entry titles resolve to the running localization, not the English source")
+    func entryTitlesAreLocalized() throws {
+        let entry = try #require(SearchIndex.entries.first { $0.id == "general.launchAtLogin" })
+        let german = try Self.localizationBundle("de")
+        let english = try Self.localizationBundle("en")
+
+        #expect(entry.titleText == "Launch at Login")
+        #expect(entry.localizedTitle(bundle: english) == "Launch at Login")
+        #expect(entry.localizedTitle(bundle: german) == "Beim Einloggen starten")
+    }
+
+    @Test("A German query matches the entry whose German title it names")
+    func germanQueryMatchesTranslatedTitle() throws {
+        // "Einloggen" appears only in the German rendering of
+        // "Launch at Login" — nothing in the English index contains it, so a
+        // hit proves the translated title is what was indexed.
+        let german = try Self.localizationBundle("de")
+        let results = SearchModel.rankedEntries(for: "Einloggen", bundle: german)
+
+        #expect(results.contains { $0.id == "general.launchAtLogin" })
+    }
+
+    @Test("An English query still matches in a localized build")
+    func englishQueryMatchesInLocalizedBuild() throws {
+        let german = try Self.localizationBundle("de")
+        let results = SearchModel.rankedEntries(for: "Launch at Login", bundle: german)
+
+        #expect(results.contains { $0.id == "general.launchAtLogin" })
     }
 }

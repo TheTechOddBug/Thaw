@@ -32,17 +32,25 @@ private struct SearchItem: Searchable {
     let entry: SearchEntry
     let properties: [FuseProp]
 
-    init(entry: SearchEntry) {
+    init(entry: SearchEntry, bundle: Bundle = .main) {
         self.entry = entry
         // Weight the title highest, then keywords, then the description.
         // Lower weight values contribute less to the diff score, so a
         // match in the title ranks above a match in the description.
         let weights = SearchWeights.settings
-        var props = [FuseProp(entry.titleText, weight: weights.title)]
+        // Match against what the pane actually renders, so a translated
+        // build is searchable in its own language.
+        let localizedTitle = entry.localizedTitle(bundle: bundle)
+        var props = [FuseProp(localizedTitle, weight: weights.title)]
+        if localizedTitle != entry.titleText {
+            // Keep the English source matchable too — users search the term
+            // they saw in the docs as often as the one on screen.
+            props.append(FuseProp(entry.titleText, weight: weights.title))
+        }
         if !entry.keywords.isEmpty {
             props.append(FuseProp(entry.keywords.joined(separator: " "), weight: weights.keywords))
         }
-        if let descriptionText = entry.descriptionText {
+        if let descriptionText = entry.localizedDescription(bundle: bundle) {
             props.append(FuseProp(descriptionText, weight: weights.description))
         }
         self.properties = props
@@ -70,7 +78,20 @@ final class SearchModel {
     let fuse = Fuse(threshold: 0.5)
 
     /// The static search corpus, tokenized once and reused across queries.
-    private let searchItems = SearchIndex.entries.map(SearchItem.init)
+    private let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
+
+    /// Ranks the whole index against `query`, resolving titles against
+    /// `bundle`.
+    ///
+    /// The instance path resolves against `Bundle.main`, whose localization a
+    /// test process cannot switch; this exposes the same ranking with the
+    /// bundle injected so translated matching is verifiable.
+    static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
+        let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
+        let results = Fuse(threshold: 0.5).searchSync(query, in: items, by: \.properties)
+        let scored = results.map { (item: items[$0.index], diffScore: $0.diffScore) }
+        return SearchIndex.sortedByRelevance(scored).map(\.entry)
+    }
 
     /// Rebuilds `displayedGroups` from the current `searchText`.
     func updateDisplayedItems() {

@@ -20,6 +20,10 @@ class Permission: Identifiable {
     /// A Boolean value that indicates whether the app has this permission.
     private(set) var hasPermission = false {
         didSet {
+            // `configureCancellables` re-assigns this every 3 seconds while
+            // the permission is still missing, so fire only on an actual
+            // transition rather than on every poll.
+            guard oldValue != hasPermission else { return }
             onChange?()
         }
     }

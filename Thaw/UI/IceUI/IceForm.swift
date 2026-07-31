@@ -30,16 +30,8 @@ struct IceForm<Content: View>: View {
         .scrollContentBackground(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: IceFormWidthKey.self,
-                    value: proxy.size.width
-                )
-            }
-        }
-        .onPreferenceChange(IceFormWidthKey.self) { width in
-            formWidth = width
+        .onFrameChange { frame in
+            formWidth = frame.width
         }
         .contentMargins(.horizontal, readingGutter, for: .scrollContent)
         .focusSection()
@@ -55,12 +47,5 @@ struct IceForm<Content: View>: View {
             return 0
         }
         return overflow / 2
-    }
-}
-
-private struct IceFormWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }

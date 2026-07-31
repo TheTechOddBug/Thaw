@@ -158,6 +158,24 @@ private struct SlideHUD<Content: View>: View {
     }
 }
 
+// MARK: - Restart Helper
+
+/// Cancels the in-flight animation task of a tour mockup and replaces it with
+/// a new one running `work`.
+///
+/// Every mockup model restarts the same way — cancel, reset its state, then
+/// drive a sleep-and-animate sequence — and each of those sequences checks
+/// `Task.isCancelled` between steps, so the previous task must be cancelled
+/// before the new one is stored.
+@MainActor
+func replaceRestartTask(
+    _ task: inout Task<Void, Never>?,
+    running work: @escaping @MainActor () async -> Void
+) {
+    task?.cancel()
+    task = Task { await work() }
+}
+
 // MARK: - Menu Bar Management
 
 @MainActor
@@ -167,12 +185,11 @@ final class ThawManagementMockupModel {
     @ObservationIgnored private var restartTask: Task<Void, Never>?
 
     func restart() {
-        restartTask?.cancel()
         itemsHidden = true
-        restartTask = Task {
+        replaceRestartTask(&restartTask) {
             try? await Task.sleep(for: .seconds(1.0))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.45)) { itemsHidden = false }
+            withAnimation(.spring(duration: 0.45)) { self.itemsHidden = false }
         }
     }
 
@@ -227,16 +244,15 @@ final class ThawAppearanceMockupModel {
     @ObservationIgnored private var restartTask: Task<Void, Never>?
 
     func restart() {
-        restartTask?.cancel()
         styleIndex = 0
-        restartTask = Task {
+        replaceRestartTask(&restartTask) {
             try? await Task.sleep(for: .seconds(1.1))
             guard !Task.isCancelled else { return }
-            select(1)
+            self.select(1)
 
             try? await Task.sleep(for: .seconds(1.75))
             guard !Task.isCancelled else { return }
-            select(2)
+            self.select(2)
         }
     }
 
@@ -297,12 +313,11 @@ final class ThawHotkeysMockupModel {
     @ObservationIgnored private var restartTask: Task<Void, Never>?
 
     func restart() {
-        restartTask?.cancel()
         itemsVisible = false
-        restartTask = Task {
+        replaceRestartTask(&restartTask) {
             try? await Task.sleep(for: .seconds(1.0))
             guard !Task.isCancelled else { return }
-            trigger()
+            self.trigger()
         }
     }
 
@@ -367,16 +382,15 @@ final class ThawProfilesMockupModel {
     }
 
     func restart() {
-        restartTask?.cancel()
         focusIndex = 0
-        restartTask = Task {
+        replaceRestartTask(&restartTask) {
             try? await Task.sleep(for: .seconds(1.1))
             guard !Task.isCancelled else { return }
-            select(1)
+            self.select(1)
 
             try? await Task.sleep(for: .seconds(1.75))
             guard !Task.isCancelled else { return }
-            select(2)
+            self.select(2)
         }
     }
 

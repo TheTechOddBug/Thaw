@@ -294,9 +294,7 @@ final class DisplaySettingsManager {
                 continue
             }
             if seeded[uuid] != nil { continue }
-            seeded[uuid] = DisplayIceBarConfiguration
-                .defaultConfiguration
-                .withItemSpacingOffset(offset)
+            seeded[uuid] = globalConfiguration.withItemSpacingOffset(offset)
         }
         guard seeded != configurations else { return }
         configurations = seeded
@@ -311,6 +309,7 @@ final class DisplaySettingsManager {
         }
     }
 
+    @MainActor
     deinit {
         // Combine cancellables tear down automatically; the async-algorithms
         // screen-parameters task is manually owned, so cancel it here. Ending
@@ -359,6 +358,9 @@ final class DisplaySettingsManager {
         // identical — the two per-event skips are `continue` (skip this
         // notification), not loop exit.
         let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        // A repeated setup must not leave the previous task — and the
+        // NotificationCenter observer its defer owns — running.
+        screenParametersTask?.cancel()
         screenParametersTask = Task { @MainActor [weak self] in
             // The observer is owned by this task: added when it starts and
             // removed when it ends (cancellation ends the for-await loop, which
@@ -635,7 +637,7 @@ final class DisplaySettingsManager {
 
     /// Toggles useIceBar for a specific display UUID.
     private func toggleUseIceBar(forDisplayUUID uuid: String) {
-        let current = configurations[uuid] ?? .defaultConfiguration
+        let current = configuration(forUUID: uuid)
         updateConfiguration(forDisplayUUID: uuid) { config in
             config.withUseIceBar(!current.useIceBar)
         }
@@ -647,7 +649,7 @@ final class DisplaySettingsManager {
             // Update all displays that have IceBar enabled
             for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withIceBarLocation(location) }
                 }
@@ -669,7 +671,7 @@ final class DisplaySettingsManager {
         if scope == .allEnabledDisplays {
             for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withIceBarLayout(layout) }
                 }
@@ -691,7 +693,7 @@ final class DisplaySettingsManager {
         if scope == .allEnabledDisplays {
             for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withGridColumns(columns) }
                 }
@@ -714,7 +716,7 @@ final class DisplaySettingsManager {
             // Update all displays that do NOT have IceBar enabled
             for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if !config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(value) }
                 }
@@ -730,7 +732,7 @@ final class DisplaySettingsManager {
             // Toggle on all displays that do NOT have IceBar enabled
             for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if !config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(!$0.alwaysShowHiddenItems) }
                 }
@@ -749,7 +751,7 @@ final class DisplaySettingsManager {
 
     /// Toggles alwaysShowHiddenItems for a specific display UUID.
     private func toggleAlwaysShowHiddenItems(forDisplayUUID uuid: String) {
-        let current = configurations[uuid] ?? .defaultConfiguration
+        let current = configuration(forUUID: uuid)
         updateConfiguration(forDisplayUUID: uuid) { config in
             config.withAlwaysShowHiddenItems(!current.alwaysShowHiddenItems)
         }
@@ -820,7 +822,7 @@ final class DisplaySettingsManager {
         forDisplayUUID uuid: String,
         transform: (DisplayIceBarConfiguration) -> DisplayIceBarConfiguration
     ) {
-        let current = configurations[uuid] ?? .defaultConfiguration
+        let current = configuration(forUUID: uuid)
         let updated = transform(current)
         var newConfigurations = configurations
         newConfigurations[uuid] = updated

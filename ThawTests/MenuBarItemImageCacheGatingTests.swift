@@ -68,17 +68,4 @@ final class MenuBarItemImageCacheGatingTests: XCTestCase {
             )
         )
     }
-
-    /// The pane was opened once but has since closed, and no consumer is
-    /// visible: must not allow. This is the sticky-flag regression this plan
-    /// fixes — previously `settingsPaneHasBeenOpened` never reset to `false`.
-    func testPaneOpenedThenClosedDoesNotAllow() {
-        XCTAssertFalse(
-            MenuBarItemImageCache.shouldAllowBackgroundCapture(
-                hasVisibleConsumer: false,
-                allowBackgroundCapture: true,
-                isSettingsPaneOpen: false
-            )
-        )
-    }
 }

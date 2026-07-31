@@ -91,11 +91,6 @@ nonisolated final class HotkeyRegistry {
                 self?.registerAllRetained()
             }
 
-        state.withLockUnchecked { state in
-            didBeginTrackingObserver.store(in: &state.cancellables)
-            didEndTrackingObserver.store(in: &state.cancellables)
-        }
-
         let handler: EventHandlerUPP = { _, event, userData in
             guard
                 let event,
@@ -112,7 +107,7 @@ nonisolated final class HotkeyRegistry {
             EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased)),
         ]
 
-        return InstallEventHandler(
+        let status = InstallEventHandler(
             GetEventDispatcherTarget(),
             handler,
             eventTypes.count,
@@ -120,6 +115,24 @@ nonisolated final class HotkeyRegistry {
             Unmanaged.passUnretained(self).toOpaque(),
             &eventHandlerRef
         )
+
+        // Only retain the menu-tracking observers once the handler is
+        // actually installed. A failure leaves `eventHandlerRef` nil, so the
+        // next registration re-enters this function — storing them up front
+        // would add a duplicate pair of sinks on every retry, and each
+        // duplicate unregisters and re-registers every hotkey again.
+        guard status == noErr else {
+            didBeginTrackingObserver.cancel()
+            didEndTrackingObserver.cancel()
+            return status
+        }
+
+        state.withLockUnchecked { state in
+            didBeginTrackingObserver.store(in: &state.cancellables)
+            didEndTrackingObserver.store(in: &state.cancellables)
+        }
+
+        return status
     }
 
     /// Registers the given hotkey for the given event kind and returns the

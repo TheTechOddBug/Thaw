@@ -25,9 +25,12 @@ nonisolated enum SettingsProperty: Hashable {
 /// `titleKey`/`sectionKey` reuse the exact `LocalizedStringKey` literals from
 /// the settings panes so no new translation keys are introduced for titles or
 /// section headers — they resolve to the same catalog entries the panes use.
-/// `titleText`/`sectionText` are the English source strings used for fuzzy
-/// matching; locale-aware matching against the runtime localized string is a
-/// future enhancement.
+/// `titleText`/`sectionText`/`descriptionText` are the English source strings,
+/// which are also the catalog keys, so ``localizedTitle(bundle:)`` and its
+/// siblings resolve them to the running localization for fuzzy matching. `keywords`
+/// stays English: it is a search-only alias list with no catalog entries, and
+/// the English title is indexed alongside the translated one so terms users
+/// saw in docs or release notes keep matching in a localized build.
 ///
 /// Conforms to `@unchecked Sendable` (not `Hashable`) so the static index
 /// arrays are concurrency-safe under Swift 6 strict concurrency.
@@ -46,6 +49,30 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let sectionText: String?
     let keywords: [String]
     let property: SettingsProperty?
+
+    /// The title as the settings pane renders it.
+    ///
+    /// The English source doubles as the catalog key, so this resolves the
+    /// same entry the pane's `titleKey` does.
+    ///
+    /// - Parameter bundle: The bundle to resolve against. Defaults to
+    ///   `.main`, which picks the running localization; tests pass a
+    ///   specific `.lproj` bundle, since the `locale:` argument of
+    ///   `String(localized:)` only selects formatting, not which
+    ///   localization is looked up.
+    func localizedTitle(bundle: Bundle = .main) -> String {
+        String(localized: String.LocalizationValue(titleText), bundle: bundle)
+    }
+
+    /// The section header as rendered, when the entry has one.
+    func localizedSection(bundle: Bundle = .main) -> String? {
+        sectionText.map { String(localized: String.LocalizationValue($0), bundle: bundle) }
+    }
+
+    /// The annotation text as rendered, when the entry has one.
+    func localizedDescription(bundle: Bundle = .main) -> String? {
+        descriptionText.map { String(localized: String.LocalizationValue($0), bundle: bundle) }
+    }
 
     var disclosure: AppNavigationState.SettingsDisclosure? {
         switch id {

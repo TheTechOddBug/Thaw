@@ -618,7 +618,10 @@ nonisolated extension Bridging {
         else {
             return false
         }
-        guard bounds.width > 0, bounds.height > 0 else {
+        // `width`/`height` return the standardized (absolute) extents, so a
+        // negatively-sized rect would pass a `> 0` test against them. Check
+        // the raw `size` components, which keep the sign.
+        guard bounds.size.width > 0, bounds.size.height > 0 else {
             return false
         }
         let pixelWidth = (bounds.width * scale).rounded()

@@ -256,61 +256,22 @@ nonisolated enum ScreenCapture {
 
     private static let shareableContentCache = ShareableContentCache<ShareableContentSnapshot>()
 
-    /// `SCShareableContent.current` is the async form of
-    /// `getShareableContentWithCompletionHandler:`. It has no built-in
-    /// cancellation, so it runs inside a child task that races a
-    /// `withTaskCancellationHandler` resume: a cancelled caller aborts promptly
-    /// instead of proceeding to a wasted capture, while a late framework result
-    /// is discarded because the continuation has already been taken.
+    /// Performs the underlying enumeration for ``getShareableContent(maxAge:)``
+    /// on a cache miss.
+    ///
+    /// `SCShareableContent.current` has no built-in cancellation, and this
+    /// runs inside `ShareableContentCache`'s shared fetch task, which
+    /// `awaitWithoutCancelling` deliberately shields from any one caller's
+    /// cancellation so joiners still get a result. A cancellation handler here
+    /// would therefore never fire, so there is none: the call simply runs to
+    /// completion and its result is cached.
     private static func fetchShareableContentUncached() async throws -> ShareableContentSnapshot {
-        let box = ContinuationBox<SCShareableContent, any Error>()
-        let content = try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                box.setContinuation(continuation)
-                startSettling(into: box)
-            }
-        } onCancel: {
-            // Resume with cancellation error if still pending.
-            box.takeContinuation()?.resume(throwing: CancellationError())
-        }
+        let content = try await SCShareableContent.current
         return ShareableContentSnapshot(content: content)
-    }
-
-    /// Starts the fetch that eventually settles `box`. Kept out of the
-    /// continuation closure so the nesting there stays shallow enough to
-    /// read; the task is deliberately unawaited, since the continuation is
-    /// what carries the result back.
-    private static func startSettling(into box: ContinuationBox<SCShareableContent, any Error>) {
-        Task {
-            await settleFromCurrentContent(into: box)
-        }
-    }
-
-    private static func settleFromCurrentContent(
-        into box: ContinuationBox<SCShareableContent, any Error>
-    ) async {
-        do {
-            let content = try await SCShareableContent.current
-            box.takeContinuation()?.resume(returning: content)
-        } catch {
-            box.takeContinuation()?.resume(throwing: error)
-        }
     }
 }
 
 // MARK: - Helper Types
-
-private nonisolated final class ContinuationBox<T, E: Error>: Sendable {
-    private let lock = OSAllocatedUnfairLock<CheckedContinuation<T, E>?>(initialState: nil)
-
-    func setContinuation(_ cont: CheckedContinuation<T, E>) {
-        lock.withLock { $0 = cont }
-    }
-
-    func takeContinuation() -> CheckedContinuation<T, E>? {
-        lock.withLock { $0.take() }
-    }
-}
 
 private nonisolated final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Shared serial queue for all SCStream sample buffer handlers.

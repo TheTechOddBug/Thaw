@@ -41,22 +41,21 @@ final class ThawWelcomeModel {
     @ObservationIgnored private var restartTask: Task<Void, Never>?
 
     func restart() {
-        restartTask?.cancel()
         iconAppeared = false
         itemsHidden = true
 
-        restartTask = Task {
+        replaceRestartTask(&restartTask) {
             try? await Task.sleep(for: .seconds(0.05))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.6, bounce: 0.35)) { iconAppeared = true }
+            withAnimation(.spring(duration: 0.6, bounce: 0.35)) { self.iconAppeared = true }
 
             try? await Task.sleep(for: .seconds(0.55))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.5, bounce: 0.4)) { itemsHidden = false }
+            withAnimation(.spring(duration: 0.5, bounce: 0.4)) { self.itemsHidden = false }
 
             try? await Task.sleep(for: .seconds(2.0))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.55, bounce: 0.1)) { itemsHidden = true }
+            withAnimation(.spring(duration: 0.55, bounce: 0.1)) { self.itemsHidden = true }
         }
     }
 

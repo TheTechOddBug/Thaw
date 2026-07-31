@@ -489,32 +489,29 @@ final class ProfileManager {
     }
 
     /// Deletes a profile by its identifier.
-    /// Deletes a profile by its identifier.
     ///
     /// A profile file that is already absent is treated as success: the
     /// manifest entry is still removed. Leaving the entry behind would have
     /// made the profile permanently undeletable, since a subsequent attempt
     /// would throw on the same missing file.
+    ///
+    /// Any other removal failure (permissions, a busy volume) leaves both the
+    /// file and the manifest entry in place and rethrows. Dropping the entry
+    /// while the file survived would orphan it: nothing would reference it,
+    /// and nothing would ever clean it up.
     func deleteProfile(id: UUID) throws {
         let url = profileURL(for: id)
 
-        var removalError: Error?
         do {
             try FileManager.default.removeItem(at: url)
         } catch let error as CocoaError where error.code == .fileNoSuchFile {
             diagLog.debug(
                 "deleteProfile: file already absent for \(id), removing manifest entry anyway"
             )
-        } catch {
-            removalError = error
         }
 
         profiles.removeAll { $0.id == id }
         saveManifest()
-
-        if let removalError {
-            throw removalError
-        }
     }
 
     /// Renames a profile.

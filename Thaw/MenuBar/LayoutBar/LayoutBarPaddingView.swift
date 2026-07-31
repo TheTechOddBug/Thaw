@@ -295,6 +295,11 @@ final class LayoutBarPaddingView: NSView {
                         )
                         appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
                         await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
+                    } catch MenuBarItemManager.EventError.menuTrackingActive {
+                        // Same deferral the outer catch handles: the user
+                        // opened a menu bar item's menu while the retry was
+                        // in flight. Nothing failed, so don't alert.
+                        Self.diagLog.info("Rescue-and-retry deferred, a menu bar item menu was open")
                     } catch {
                         Self.diagLog.error("Rescue-and-retry failed for \(item.logString): \(error)")
                         let alert = NSAlert()

@@ -7,15 +7,43 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Thaw
 
 @MainActor
 @Suite("Display settings global fallback", .serialized)
-struct DisplaySettingsManagerGlobalFallbackTests {
+final class DisplaySettingsManagerGlobalFallbackTests {
+    /// Keys `DisplaySettingsManager` persists through the `didSet` observers
+    /// that `makeManager` trips. `Defaults` is hardcoded to
+    /// `UserDefaults.standard`, so without this the suite would overwrite the
+    /// developer's own display settings.
+    private static let touchedKeys: [Defaults.Key] = [
+        .globalDisplayConfiguration,
+        .displayIceBarConfigurations,
+    ]
+
+    private let savedDefaults: [Defaults.Key: Data?]
+
     private let global = DisplayIceBarConfiguration
         .defaultConfiguration
         .withItemSpacingOffset(-16)
+
+    init() {
+        savedDefaults = Dictionary(
+            uniqueKeysWithValues: Self.touchedKeys.map { ($0, Defaults.data(forKey: $0)) }
+        )
+    }
+
+    deinit {
+        for (key, value) in savedDefaults {
+            if let value {
+                Defaults.set(value, forKey: key)
+            } else {
+                Defaults.removeObject(forKey: key)
+            }
+        }
+    }
 
     private func makeManager(
         configurations: [String: DisplayIceBarConfiguration] = [:],

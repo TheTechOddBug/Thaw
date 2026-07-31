@@ -1911,23 +1911,6 @@ extension MenuBarItemManager {
                 return
             }
 
-            // Fallback 2: match by known window IDs obtained from the ControlItem
-            // objects themselves. This handles the case where both the tag and the
-            // window title are unreliable on macOS 26.
-            if let hiddenWID = hiddenControlItemWindowID,
-               let idx = items.firstIndex(where: { $0.windowID == hiddenWID })
-            {
-                self.hidden = items.remove(at: idx)
-                if let ahWID = alwaysHiddenControlItemWindowID,
-                   let ahIdx = items.firstIndex(where: { $0.windowID == ahWID })
-                {
-                    self.alwaysHidden = items.remove(at: ahIdx)
-                } else {
-                    self.alwaysHidden = nil
-                }
-                return
-            }
-
             // Fallback 3 (strategy 4, #754): AX-frame correlation against
             // Thaw's own AX elements. Thaw's control items are its own
             // NSStatusItems, so their AX elements (reached via Thaw's own

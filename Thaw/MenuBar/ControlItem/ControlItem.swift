@@ -334,6 +334,7 @@ final class ControlItem {
 
             if identifier == .visible {
                 let generalSettings = appState.settings.general
+                showIceIconObservationTask?.cancel()
                 showIceIconObservationTask = Task { [weak self] in
                     let changes = Observations { generalSettings.showIceIcon }
                     for await shouldShow in changes {
@@ -342,6 +343,7 @@ final class ControlItem {
                     }
                 }
 
+                iceIconObservationTask?.cancel()
                 iceIconObservationTask = Task { [weak self] in
                     let changes = Observations { (generalSettings.iceIcon, generalSettings.customIceIconIsTemplate) }
                     for await _ in changes {
@@ -353,6 +355,7 @@ final class ControlItem {
 
             if isSectionDivider {
                 let advancedSettings = appState.settings.advanced
+                sectionDividerStyleObservationTask?.cancel()
                 sectionDividerStyleObservationTask = Task { [weak self] in
                     let changes = Observations { advancedSettings.sectionDividerStyle }
                     for await _ in changes {

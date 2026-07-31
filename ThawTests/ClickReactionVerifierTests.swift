@@ -203,11 +203,12 @@ final class ClickReactionVerifierTests: XCTestCase {
 
     // MARK: Verification
 
-    func testAnItemWindowThatIsNotOnScreenReadsAsAReaction() async {
+    func testAnItemWindowThatWasNeverOnScreenIsNotAReaction() async {
         // The verifier is asked about a window ID the window server does
-        // not know, which is the same observation as an item that removed
-        // itself in response to the click. It has to resolve on the first
-        // look rather than spending the whole budget.
+        // not know, and which is absent from the snapshot's own on-screen
+        // set. That is a stale ID, not an item that removed itself in
+        // response to the click, so it must not be read as the owner
+        // reacting.
         let snapshot = ClickReactionVerifier.Snapshot(
             pids: [ownerPID],
             itemWindowID: .max,
@@ -217,7 +218,7 @@ final class ClickReactionVerifierTests: XCTestCase {
 
         let reaction = await ClickReactionVerifier.verify(against: snapshot)
 
-        XCTAssertEqual(reaction, .itemChanged)
-        XCTAssertTrue(reaction.didReact)
+        XCTAssertEqual(reaction, .unobserved)
+        XCTAssertFalse(reaction.didReact)
     }
 }

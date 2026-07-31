@@ -216,7 +216,12 @@ nonisolated enum ClickReactionVerifier {
 
     private static func itemChanged(_ snapshot: Snapshot) -> Bool {
         guard Bridging.isWindowOnScreen(snapshot.itemWindowID) else {
-            return true
+            // Off-screen now. That is the owner acting only if the window
+            // was on screen when the snapshot was taken — an ID that was
+            // already stale then tells us nothing about our click, and
+            // reading it as a reaction reports success for an item we
+            // never actually observed.
+            return snapshot.onScreenWindowIDs.contains(snapshot.itemWindowID)
         }
         return itemChanged(from: snapshot.itemBounds, to: Bridging.getWindowBounds(for: snapshot.itemWindowID))
     }
