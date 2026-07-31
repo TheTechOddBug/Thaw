@@ -135,13 +135,19 @@ final class MenuBarSearchPanel: NSPanel {
         // refresh with `model.objectWillChange.send()`; @Observable has no
         // such escape hatch. `MenuBarSearchContentView.updateDisplayedItems()`
         // (the function that actually rebuilds the row list) isn't reachable
-        // from here across the panel/view boundary, so instead we
-        // reassign `displayedItems` to itself: @Observable's generated
-        // setter unconditionally calls `withMutation(keyPath:)` (no
-        // implicit equality check), so this is a genuine, Observation-
-        // visible mutation of the exact property the row list renders from,
-        // forcing SwiftUI to re-evaluate each row (and pick up the new name).
-        model.displayedItems = model.displayedItems
+        // from here across the panel/view boundary, so instead we write
+        // `displayedItems` back unchanged: @Observable's generated setter
+        // unconditionally calls `withMutation(keyPath:)` (no implicit
+        // equality check), so this is a genuine, Observation-visible
+        // mutation of the exact property the row list renders from, forcing
+        // SwiftUI to re-evaluate each row (and pick up the new name).
+        //
+        // Routed through a local rather than written as a direct
+        // self-assignment: the round trip is the point, and spelling it out
+        // keeps it from reading — to a human or a static analyser — as a
+        // typo'd `x = x`.
+        let itemsToRerender = model.displayedItems
+        model.displayedItems = itemsToRerender
     }
 
     /// The default screen to show the panel on.

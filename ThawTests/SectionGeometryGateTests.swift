@@ -136,28 +136,14 @@ struct SectionGeometryGateTests {
         // was in: resolution had recovered, so the sourcePID guard passed
         // and the collapsed reading reached disk.
         #expect(!LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: false,
-            hasPendingDivergence: false
+            .init(
+                hiddenSectionHasRoom: false
+            )
         ))
     }
 
     @Test("Healthy geometry with everything else clear persists")
     func healthyGeometryPersists() {
-        #expect(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
-        ))
+        #expect(LayoutSolver.shouldPersistSavedOrder(.init()))
     }
 }

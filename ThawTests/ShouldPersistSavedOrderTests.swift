@@ -21,16 +21,7 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// The expected state for ordinary cache cycles between user
     /// actions.
     func testAllFalseAndContextsEmptyPersists() {
-        XCTAssertTrue(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
-        ))
+        XCTAssertTrue(LayoutSolver.shouldPersistSavedOrder(.init()))
     }
 
     /// Restore in flight: the cross-section / within-section restore
@@ -38,14 +29,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// not be persisted.
     func testRestoringItemOrderBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: true,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isRestoringItemOrder: true
+            )
         ))
     }
 
@@ -53,14 +39,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// transient mid-reset state is not the user's intent.
     func testResettingLayoutBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: true,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isResettingLayout: true
+            )
         ))
     }
 
@@ -69,14 +50,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// persist sourcePID-unresolved placeholder identifiers.
     func testInStartupSettlingBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: true,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isInStartupSettling: true
+            )
         ))
     }
 
@@ -86,14 +62,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// returning false) must not let the partial layout reach disk.
     func testApplyingProfileLayoutBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isApplyingProfileLayout: true
+            )
         ))
     }
 
@@ -105,14 +76,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// over).
     func testTemporarilyShownContextsNonEmptyBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: false,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                temporarilyShownItemContextsIsEmpty: false
+            )
         ))
     }
 
@@ -124,14 +90,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// bake that transient state into the saved layout (#736).
     func testPendingDivergenceBlocks() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: true
+            .init(
+                hasPendingDivergence: true
+            )
         ))
     }
 
@@ -140,24 +101,16 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// per-flag predicates rather than counting.
     func testMultipleBlockingFlagsAllBlock() {
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: true,
-            isResettingLayout: true,
-            isInStartupSettling: false,
-            isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isRestoringItemOrder: true,
+                isResettingLayout: true
+            )
         ))
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: false,
-            isResettingLayout: false,
-            isInStartupSettling: true,
-            isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true,
-            alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true,
-            hasPendingDivergence: false
+            .init(
+                isInStartupSettling: true,
+                isApplyingProfileLayout: true
+            )
         ))
     }
 }

@@ -1182,24 +1182,33 @@ nonisolated enum LayoutSolver {
     /// instantiating MenuBarItemManager. Any future addition to the
     /// gate (new in-flight signal) should extend both this function
     /// and its tests.
-    static nonisolated func shouldPersistSavedOrder(
-        isRestoringItemOrder: Bool,
-        isResettingLayout: Bool,
-        isInStartupSettling: Bool,
-        isApplyingProfileLayout: Bool,
-        temporarilyShownItemContextsIsEmpty: Bool,
-        alwaysHiddenSectionResolved: Bool,
-        hiddenSectionHasRoom: Bool,
-        hasPendingDivergence: Bool
-    ) -> Bool {
-        !isRestoringItemOrder &&
-            !isResettingLayout &&
-            !isInStartupSettling &&
-            !isApplyingProfileLayout &&
-            temporarilyShownItemContextsIsEmpty &&
-            alwaysHiddenSectionResolved &&
-            hiddenSectionHasRoom &&
-            !hasPendingDivergence
+    static nonisolated func shouldPersistSavedOrder(_ gate: SavedOrderGate) -> Bool {
+        !gate.isRestoringItemOrder &&
+            !gate.isResettingLayout &&
+            !gate.isInStartupSettling &&
+            !gate.isApplyingProfileLayout &&
+            gate.temporarilyShownItemContextsIsEmpty &&
+            gate.alwaysHiddenSectionResolved &&
+            gate.hiddenSectionHasRoom &&
+            !gate.hasPendingDivergence
+    }
+
+    /// The signals ``shouldPersistSavedOrder(_:)`` reads.
+    ///
+    /// Bundled rather than passed as eight positional flags. A new
+    /// in-flight signal then extends this type instead of every call site,
+    /// which is what the note above asks for, and the defaults spell out
+    /// the permissive state — the one where persisting is safe — so a call
+    /// site only names the signals that deviate from it.
+    struct SavedOrderGate {
+        var isRestoringItemOrder = false
+        var isResettingLayout = false
+        var isInStartupSettling = false
+        var isApplyingProfileLayout = false
+        var temporarilyShownItemContextsIsEmpty = true
+        var alwaysHiddenSectionResolved = true
+        var hiddenSectionHasRoom = true
+        var hasPendingDivergence = false
     }
 
     /// Whether the always-hidden section is resolved well enough for the

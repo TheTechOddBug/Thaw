@@ -2321,14 +2321,16 @@ extension MenuBarItemManager {
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
 
         if LayoutSolver.shouldPersistSavedOrder(
-            isRestoringItemOrder: isRestoringItemOrder,
-            isResettingLayout: isResettingLayout,
-            isInStartupSettling: isInStartupSettling,
-            isApplyingProfileLayout: isApplyingProfileLayout,
-            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
-            alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
-            hiddenSectionHasRoom: hiddenSectionHasRoom,
-            hasPendingDivergence: hasPendingDivergence
+            LayoutSolver.SavedOrderGate(
+                isRestoringItemOrder: isRestoringItemOrder,
+                isResettingLayout: isResettingLayout,
+                isInStartupSettling: isInStartupSettling,
+                isApplyingProfileLayout: isApplyingProfileLayout,
+                temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
+                alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
+                hiddenSectionHasRoom: hiddenSectionHasRoom,
+                hasPendingDivergence: hasPendingDivergence
+            )
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.

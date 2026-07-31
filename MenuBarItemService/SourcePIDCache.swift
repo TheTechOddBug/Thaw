@@ -353,16 +353,28 @@ actor SourcePIDCache {
         // an already-cached resolved one, and the scan only ever ran at
         // session start.
         let now = ContinuousClock.now
-        if let unresolved = windows.first(where: { window in
-            state.withLock { state in
-                state.pids[window.windowID] == nil
-                    && (state.negativeUntil[window.windowID].map { $0 <= now } ?? true)
-            }
-        }) {
+        if let unresolved = windows.first(where: { needsScan($0, asOf: now) }) {
             _ = pidBody(for: unresolved)
         }
         return windows.map { window in
             state.withLock { $0.pids[window.windowID] }
+        }
+    }
+
+    /// Whether `window` still needs the full AX traversal: no PID has been
+    /// cached for it, and any negative-cache entry has expired by `now`.
+    ///
+    /// Split out of `pidsBody` so the search predicate, the lock, and the
+    /// deadline comparison are not three closures deep.
+    private nonisolated func needsScan(_ window: WindowInfo, asOf now: ContinuousClock.Instant) -> Bool {
+        state.withLock { state in
+            guard state.pids[window.windowID] == nil else {
+                return false
+            }
+            guard let negativeUntil = state.negativeUntil[window.windowID] else {
+                return true
+            }
+            return negativeUntil <= now
         }
     }
 
