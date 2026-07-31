@@ -164,6 +164,14 @@ nonisolated extension CGImage {
             }
         }
 
+        // Every pixel was below the alpha threshold, so there is nothing to
+        // average. Dividing by the zero count below would hand back a CGColor
+        // whose components are all NaN, which reads as a valid color to every
+        // caller and poisons whatever it is blended into.
+        guard count > 0 else {
+            return nil
+        }
+
         // Components are currently in integer format (0 to 255), but need
         // to be converted to floating point (0 to 1). Makes more sense to
         // scale the count up to match the components, rather than scale

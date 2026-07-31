@@ -66,7 +66,6 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
-$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MoveInputSuppression.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
