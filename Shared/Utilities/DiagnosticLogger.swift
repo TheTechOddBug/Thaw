@@ -257,8 +257,22 @@ nonisolated final class DiagnosticLogger: @unchecked Sendable {
 
                 if logFiles.count > keepCount {
                     for file in logFiles.dropFirst(keepCount) {
-                        try FileManager.default.removeItem(at: file)
-                        osLog.debug("Removed old log file: \(file.lastPathComponent, privacy: .public)")
+                        // Each removal is isolated so one stubborn file cannot
+                        // abort the rest of the prune and leave the directory
+                        // permanently above `keepCount`.
+                        do {
+                            try FileManager.default.removeItem(at: file)
+                            osLog.debug("Removed old log file: \(file.lastPathComponent, privacy: .public)")
+                        } catch CocoaError.fileNoSuchFile {
+                            // The main app and the MenuBarItemService XPC target
+                            // prune the same shared directory on every open, so
+                            // losing the race to a concurrent pruner is expected
+                            // and not worth a diagnostic.
+                        } catch {
+                            osLog.warning(
+                                "Failed to remove old log file \(file.lastPathComponent, privacy: .public): \(error)"
+                            )
+                        }
                     }
                 }
             } catch {
