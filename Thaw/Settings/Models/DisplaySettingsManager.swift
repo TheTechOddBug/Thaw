@@ -214,12 +214,10 @@ final class DisplaySettingsManager {
                 diagLog.error("Failed to decode per-display configurations: \(error)")
             }
         }
-        // Gate seeding on absence of the persisted key rather than an empty
-        // in-memory dictionary so a user-initiated reset (which persists an
-        // empty dict) is not silently re-seeded from on-disk system spacing.
-        if persistedData == nil {
-            seedConfigurationsFromSystemSpacing()
-        }
+        // Must precede seeding: seedConfigurationsFromSystemSpacing() builds
+        // its entries from globalConfiguration, so restoring the template
+        // afterwards would seed every display from the hardcoded default
+        // instead of the user's own.
         if let data = Defaults.data(forKey: .globalDisplayConfiguration) {
             do {
                 globalConfiguration = try decoder.decode(DisplayIceBarConfiguration.self, from: data)
@@ -227,6 +225,12 @@ final class DisplaySettingsManager {
             } catch {
                 diagLog.error("Failed to decode global display configuration: \(error)")
             }
+        }
+        // Gate seeding on absence of the persisted key rather than an empty
+        // in-memory dictionary so a user-initiated reset (which persists an
+        // empty dict) is not silently re-seeded from on-disk system spacing.
+        if persistedData == nil {
+            seedConfigurationsFromSystemSpacing()
         }
         if let data = Defaults.data(forKey: .knownDisplays) {
             do {

@@ -557,8 +557,9 @@ nonisolated extension Bridging {
         let boundsDesc = bounds.isNull ? "null (auto)" : String(format: "(%.0f,%.0f %.0fx%.0f)", bounds.origin.x, bounds.origin.y, bounds.width, bounds.height)
         diagLog.debug("captureWindowsImage: using SkyLight API, bounds=\(boundsDesc), windowCount=\(windowIDs.count), options=\(options.rawValue)")
 
-        guard isValidCaptureBounds(bounds) else {
-            diagLog.error("captureWindowsImage: refusing capture with invalid bounds \(boundsDesc) for \(windowIDs.count) windows — see issue #759")
+        let scale = maximumActiveDisplayScale()
+        guard isValidCaptureBounds(bounds, scale: scale) else {
+            diagLog.error("captureWindowsImage: refusing capture with invalid bounds \(boundsDesc) at scale \(scale) for \(windowIDs.count) windows — see issue #759")
             return nil
         }
 
@@ -570,6 +571,37 @@ nonisolated extension Bridging {
 
         diagLog.debug("captureWindowsImage: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
         return image
+    }
+
+    /// The largest point-to-pixel scale among the active displays, or `1`
+    /// when none can be read.
+    ///
+    /// `SLWindowListCreateImageFromArray` allocates the *pixel* size of the
+    /// rect it is handed, so a rect that is safe in points can still exceed
+    /// ``maximumCaptureDimension`` in pixels on a Retina display — the check
+    /// has to scale, the way both ScreenCaptureKit paths already do with
+    /// their filter's `pointPixelScale`.
+    ///
+    /// The SkyLight path has no filter to ask, and cannot resolve the scale
+    /// by intersecting the capture rect with a display: it exists precisely
+    /// to capture status-item windows parked at large negative x, which
+    /// intersect no display at all. Resolving that way would refuse exactly
+    /// the captures this path is for. The largest scale in use is taken
+    /// instead — it can only over-estimate the pixel size, which fails safe,
+    /// and a menu-bar-sized rect is orders of magnitude below the limit
+    /// either way.
+    private static func maximumActiveDisplayScale() -> CGFloat {
+        var maximum: CGFloat = 1
+        for displayID in getActiveDisplayList() {
+            guard
+                let mode = CGDisplayCopyDisplayMode(displayID),
+                mode.width > 0
+            else {
+                continue
+            }
+            maximum = max(maximum, CGFloat(mode.pixelWidth) / CGFloat(mode.width))
+        }
+        return maximum
     }
 
     /// The largest texture dimension the window server will accept for a
