@@ -91,6 +91,13 @@ struct ProfileManagerCRUDTests {
 
             let copyID = try #require(manager.profiles.first { $0.name == "Copy" }?.id)
             let copy = try manager.loadProfile(id: copyID)
+
+            // The seeded per-display entry is the load-bearing assertion:
+            // `duplicateProfile` rebuilds the copy from `original.content`,
+            // and `Profile.content` is computed, so a field dropped from
+            // either side of that round trip vanishes silently. Asserting a
+            // `makeProfile` default instead would pass even then.
+            #expect(copy.displayConfigurations["UUID-A"]?.itemSpacingOffset == 7)
             #expect(copy.content.generalSettings.rehideInterval == 15)
         }
     }

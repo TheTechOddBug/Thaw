@@ -129,6 +129,9 @@ final class SettingsResetterTests {
         ]
         settings.displaySettings.globalConfiguration = .defaultConfiguration.withItemSpacingOffset(-9)
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
+        // Default is `.activeProfile`, so this has to be moved off it for the
+        // assertion below to mean anything.
+        settings.displaySettings.unconfirmedSpacingProfileScope = .allProfiles
 
         settings.resetDisplay()
 

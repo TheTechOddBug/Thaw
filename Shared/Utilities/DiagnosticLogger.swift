@@ -30,10 +30,17 @@ nonisolated final class DiagnosticLogger: @unchecked Sendable {
                 current = newValue
                 return old
             }
+            // Ordered against queued writes on the same serial queue. `log`
+            // accepts a message, then hands the actual write to `writeQueue`;
+            // opening or closing the handle off-queue could run in that gap
+            // and either drop the message (handle already nil) or land it in
+            // whichever file was swapped in behind it. Going through the
+            // queue makes the handle a message sees the one that was current
+            // when it was accepted.
             if newValue, !oldValue {
-                openLogFile()
+                writeQueue.sync { openLogFile() }
             } else if !newValue, oldValue {
-                closeLogFile()
+                writeQueue.sync { closeLogFile() }
             }
         }
     }
@@ -129,10 +136,16 @@ nonisolated final class DiagnosticLogger: @unchecked Sendable {
             current = true
             return was
         }
-        if wasEnabled {
-            closeLogFile()
+        // Close and open as one unit on the write queue, for the reason given
+        // on `isEnabled`. Doing them as two separate hops would leave a gap
+        // in which an accepted message could be written to the handle being
+        // torn down, or to neither.
+        writeQueue.sync {
+            if wasEnabled {
+                closeLogFile()
+            }
+            openLogFile(at: fileURL)
         }
-        openLogFile(at: fileURL)
     }
 
     /// Creates the log directory if needed and opens a freshly minted
