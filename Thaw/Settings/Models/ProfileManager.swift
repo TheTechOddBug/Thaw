@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
-import Combine
 import Foundation
 
 @MainActor
@@ -37,7 +37,14 @@ final class ProfileManager {
     private let profilesDirectory: URL
     private let manifestURL: URL
     private(set) weak var appState: AppState?
-    private var cancellables = Set<AnyCancellable>()
+
+    /// Tasks backing the swift-async-algorithms debounces installed by
+    /// ``performSetup(with:)``. Each owns its own notification observer and
+    /// removes it when the task ends, so `deinit` only has to cancel them.
+    private(set) var screenParametersTask: Task<Void, Never>?
+    private(set) var focusFilterActivatedTask: Task<Void, Never>?
+    private(set) var focusFilterDeactivatedTask: Task<Void, Never>?
+
     /// Tracks the last seen active display UUID for auto-switch debouncing.
     private var lastActiveDisplayUUID: String?
     /// Whether a Focus Filter profile is currently applied.
@@ -87,6 +94,15 @@ final class ProfileManager {
         loadManifest()
     }
 
+    @MainActor
+    deinit {
+        // Each observer task is manually owned, so cancel it here. Ending a
+        // task runs its defer, which removes its notification observer.
+        screenParametersTask?.cancel()
+        focusFilterActivatedTask?.cancel()
+        focusFilterDeactivatedTask?.cancel()
+    }
+
     /// Sets up the manager with the app state and configures auto-switch.
     /// If the current display has an associated profile, it is applied
     /// after the menu bar has settled.
@@ -99,44 +115,7 @@ final class ProfileManager {
         // every assignment after this class's own init, so no explicit
         // subscription is needed here (see the doc comment on `profiles`).
 
-        // Listen for display changes to trigger auto-switch.
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.checkDisplayAndAutoSwitch()
-                }
-            }
-            .store(in: &cancellables)
-
-        // Listen for Focus Filter activation from the system.
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.applyFocusFilterProfile()
-                }
-            }
-            .store(in: &cancellables)
-
-        // Listen for Focus Filter deactivation (Focus mode turned off).
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.handleFocusFilterDeactivated()
-                }
-            }
-            .store(in: &cancellables)
+        startObservationTasks()
 
         // Check if a Focus Filter is currently active. If so, apply it;
         // otherwise fall back to display-based profile.
@@ -163,6 +142,49 @@ final class ProfileManager {
             if let currentUUID = lastActiveDisplayUUID {
                 await self.applyProfileForDisplay(uuid: currentUUID)
             }
+        }
+    }
+
+    /// (Re)starts the three notification observation tasks. The observers
+    /// follow the pattern DisplaySettingsManager adopted:
+    /// `debouncedNotificationTask` wires a NotificationCenter observer into
+    /// an AsyncStream that `.debounce(for:)` coalesces, replacing Combine's
+    /// `.debounce(for:scheduler:)`.
+    ///
+    /// A repeated setup must not leave the previous task, and the observer
+    /// its defer owns, running; hence the cancel before each assignment.
+    ///
+    /// Extracted from `performSetup(with:)` — which needs a live `AppState`
+    /// — so the wiring stays exercisable in unit tests.
+    func startObservationTasks() {
+        // Listen for display changes to trigger auto-switch.
+        screenParametersTask?.cancel()
+        screenParametersTask = debouncedNotificationTask(
+            center: .default,
+            name: NSApplication.didChangeScreenParametersNotification,
+            interval: .seconds(1.5)
+        ) { [weak self] in
+            await self?.checkDisplayAndAutoSwitch()
+        }
+
+        // Listen for Focus Filter activation from the system.
+        focusFilterActivatedTask?.cancel()
+        focusFilterActivatedTask = debouncedNotificationTask(
+            center: DistributedNotificationCenter.default(),
+            name: Notification.Name("com.stonerl.Thaw.focusFilterActivated"),
+            interval: .seconds(0.5)
+        ) { [weak self] in
+            await self?.applyFocusFilterProfile()
+        }
+
+        // Listen for Focus Filter deactivation (Focus mode turned off).
+        focusFilterDeactivatedTask?.cancel()
+        focusFilterDeactivatedTask = debouncedNotificationTask(
+            center: DistributedNotificationCenter.default(),
+            name: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"),
+            interval: .seconds(0.5)
+        ) { [weak self] in
+            await self?.handleFocusFilterDeactivated()
         }
     }
 
@@ -310,7 +332,9 @@ final class ProfileManager {
                 previousProfileID: baseContext.previousID,
                 previousProfileName: baseContext.previousName
             ))
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             await HookRunner.runIfEnabled(profilePre, context: HookRunner.Context(
                 phase: .pre,
                 scope: .profile,
@@ -319,7 +343,9 @@ final class ProfileManager {
                 previousProfileID: baseContext.previousID,
                 previousProfileName: baseContext.previousName
             ))
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
 
             // 2. Snapshot apply: push profile settings into the running
             //    app state.
@@ -623,13 +649,13 @@ final class ProfileManager {
     /// (and UserDefaults), not the full app state, so the capture and re-arm
     /// paths can be exercised in tests without standing up an AppState.
     private func captureCurrentLayout(from itemManager: MenuBarItemManager) -> MenuBarLayoutSnapshot {
-        let savedSectionOrder = UserDefaults.standard.dictionary(
+        let savedSectionOrder = Defaults.store.dictionary(
             forKey: "MenuBarItemManager.savedSectionOrder"
         ) as? [String: [String]] ?? [:]
-        let pinnedHiddenBundleIDs = UserDefaults.standard.array(
+        let pinnedHiddenBundleIDs = Defaults.store.array(
             forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"
         ) as? [String] ?? []
-        let pinnedAlwaysHiddenBundleIDs = UserDefaults.standard.array(
+        let pinnedAlwaysHiddenBundleIDs = Defaults.store.array(
             forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
         ) as? [String] ?? []
         let customNames = Defaults.dictionary(
@@ -1019,10 +1045,8 @@ final class ProfileManager {
 
     /// Applies the profile requested by a Focus Filter activation.
     func applyFocusFilterProfile() async {
-        guard let idString = UserDefaults.standard.string(
-            forKey: "FocusFilterRequestedProfileID"
-        ),
-            let profileID = UUID(uuidString: idString)
+        guard let idString = Defaults.string(forKey: .focusFilterRequestedProfileID),
+              let profileID = UUID(uuidString: idString)
         else { return }
 
         guard profileID != activeProfileID else {

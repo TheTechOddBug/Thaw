@@ -11,6 +11,7 @@ import AXSwift6
 import Cocoa
 import Collections
 import Combine
+
 // @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are
 // still not Sendable-annotated in the macOS 26/27 SDK, yet are used off the main
 // actor under OSAllocatedUnfairLock for menu-bar event posting. Removing the shim
@@ -118,7 +119,7 @@ actor SimpleSemaphore {
                 // Acquired. Drain the cancelled timeout-sleep child and
                 // ignore its error (CancellationError); this preserves
                 // invariant 2.
-                while (try? await group.next()) != nil {
+                while await (try? group.next()) != nil {
                     // Intentionally empty: draining the cancelled child, result discarded.
                 }
             }
@@ -186,7 +187,7 @@ final class MenuBarItemManager {
 
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
-    nonisolated static let controlItemRebuildThreshold = 3
+    static nonisolated let controlItemRebuildThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a
@@ -202,8 +203,8 @@ final class MenuBarItemManager {
     /// `degradedItemAXIdentities` exists yet (see its declaration), so the
     /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
     /// lookups run only when explicitly enabled for diagnostics.
-    nonisolated static let isDegradedIdentityEnrichmentEnabled =
-        UserDefaults.standard.bool(forKey: "EnableDegradedItemAXEnrichment")
+    static nonisolated let isDegradedIdentityEnrichmentEnabled =
+        Defaults.store.bool(forKey: "EnableDegradedItemAXEnrichment")
 
     /// Widest a control item can be while still counting as a marker rather
     /// than a collapsed section's stretched divider.
@@ -483,6 +484,39 @@ final class MenuBarItemManager {
     /// false re-sort triggers during an in-flight sort.
     private(set) var isApplyingProfileLayout = false
 
+    /// Monotonically increasing token identifying the most recent
+    /// profile-state arm. Each `.profile` armProfileState call takes a
+    /// new token; a cancelled apply may only roll back state it still
+    /// owns (its token is still current), so a late-arriving
+    /// cancellation cannot clobber the state armed by the newer apply
+    /// that displaced it.
+    private var profileApplyToken = 0
+
+    /// Pre-arm snapshot of the in-memory profile state, tagged with the
+    /// token of the apply that captured it. Restored when that apply is
+    /// cancelled mid-flight so memory reverts to what disk still holds
+    /// (persistence is deferred to persistProfileStateOnSuccess) and the
+    /// late-arrival re-sort path stops targeting a profile that never
+    /// committed.
+    private struct ProfileApplySnapshot {
+        var token: Int
+        var pinnedHidden: Set<String>
+        var pinnedAlwaysHidden: Set<String>
+        var sectionOrder: [String: [String]]
+        var profileLayout: (
+            pinnedHidden: Set<String>,
+            pinnedAlwaysHidden: Set<String>,
+            sectionOrder: [String: [String]],
+            itemSectionMap: [String: String],
+            itemOrder: [String: [String]]
+        )?
+        var profileItemIdentifiers: Set<String>
+    }
+
+    /// The snapshot captured by the most recent `.profile` arm, if that
+    /// apply has neither committed nor rolled back yet.
+    private var priorProfileApplySnapshot: ProfileApplySnapshot?
+
     /// True while `applyProfileLayout` is actively issuing the move
     /// sequence (Phase 6). Lets `postMoveEvents` skip redundant
     /// per-item cursor hide/show churn — the cursor is already held
@@ -500,13 +534,13 @@ final class MenuBarItemManager {
     /// Kept as a forwarding shim so callers and tests do not have to reach
     /// through to the ledger for a value that reads as a property of the
     /// manager's retry policy.
-    nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
+    static nonisolated func moveFailureBackoffInterval(failureCount: Int) -> Duration {
         MenuBarItemFailureLedger.backoffInterval(failureCount: failureCount)
     }
 
     /// How the failure ledger should file an arbitrary error thrown by a
     /// move. Only `EventError` carries enough detail to blame the owner.
-    nonisolated static func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
+    static nonisolated func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
         (error as? EventError)?.failureKind ?? .other
     }
 
@@ -551,7 +585,7 @@ final class MenuBarItemManager {
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
         let key = "MenuBarItemManager.knownItemIdentifiers"
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         if let stored = defaults.array(forKey: key) as? [String] {
             knownItemIdentifiers = Set(stored)
         }
@@ -560,13 +594,13 @@ final class MenuBarItemManager {
     /// Persists known item identifiers.
     private func persistKnownItemIdentifiers() {
         let key = "MenuBarItemManager.knownItemIdentifiers"
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         defaults.set(Array(knownItemIdentifiers), forKey: key)
     }
 
     /// Loads persisted pinned bundle identifiers.
     private func loadPinnedBundleIDs() {
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         if let hidden = defaults.array(forKey: "MenuBarItemManager.pinnedHiddenBundleIDs") as? [String] {
             pinnedHiddenBundleIDs = Set(hidden)
         }
@@ -577,7 +611,7 @@ final class MenuBarItemManager {
 
     /// Persists pinned bundle identifiers.
     private func persistPinnedBundleIDs() {
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         defaults.set(Array(pinnedHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedHiddenBundleIDs")
         defaults.set(Array(pinnedAlwaysHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs")
     }
@@ -586,11 +620,11 @@ final class MenuBarItemManager {
     /// whose apps quit before they could be rehidden.
     private func loadPendingRelocations() {
         let key = "MenuBarItemManager.pendingRelocations"
-        if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: String] {
+        if let stored = Defaults.store.dictionary(forKey: key) as? [String: String] {
             pendingRelocations = stored
         }
         let destKey = "MenuBarItemManager.pendingReturnDestinations"
-        if let stored = UserDefaults.standard.dictionary(forKey: destKey) as? [String: [String: String]] {
+        if let stored = Defaults.store.dictionary(forKey: destKey) as? [String: [String: String]] {
             pendingReturnDestinations = stored
         }
     }
@@ -598,15 +632,15 @@ final class MenuBarItemManager {
     /// Persists pending relocations.
     private func persistPendingRelocations() {
         let key = "MenuBarItemManager.pendingRelocations"
-        UserDefaults.standard.set(pendingRelocations, forKey: key)
+        Defaults.store.set(pendingRelocations, forKey: key)
         let destKey = "MenuBarItemManager.pendingReturnDestinations"
-        UserDefaults.standard.set(pendingReturnDestinations, forKey: destKey)
+        Defaults.store.set(pendingReturnDestinations, forKey: destKey)
     }
 
     /// Loads persisted section order.
     private func loadSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
-        if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: [String]] {
+        if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
             savedSectionOrder = stored
         }
     }
@@ -660,7 +694,7 @@ final class MenuBarItemManager {
     /// Persists the current saved section order.
     private func persistSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
-        UserDefaults.standard.set(savedSectionOrder, forKey: key)
+        Defaults.store.set(savedSectionOrder, forKey: key)
     }
 
     /// Extracts the current per-section item order from the given cache and
@@ -839,7 +873,7 @@ final class MenuBarItemManager {
     }
 
     /// Returns the section name for the given persisted key, if valid.
-    private nonisolated static func persistedSectionName(for key: String) -> MenuBarSection.Name? {
+    private static nonisolated func persistedSectionName(for key: String) -> MenuBarSection.Name? {
         switch key {
         case "visible": .visible
         case "hidden": .hidden
@@ -1020,7 +1054,9 @@ final class MenuBarItemManager {
         if let badgeIndex = arrangedViews.firstIndex(where: { $0.isNewItemsBadge }) {
             let rightNeighbor = arrangedViews[(badgeIndex + 1) ..< arrangedViews.count]
                 .compactMap { view -> MenuBarItem? in
-                    if case let .item(item) = view.kind { return item }
+                    if case let .item(item) = view.kind {
+                        return item
+                    }
                     return nil
                 }
                 .first
@@ -1028,7 +1064,9 @@ final class MenuBarItemManager {
             let leftNeighbor = arrangedViews[..<badgeIndex]
                 .reversed()
                 .compactMap { view -> MenuBarItem? in
-                    if case let .item(item) = view.kind { return item }
+                    if case let .item(item) = view.kind {
+                        return item
+                    }
                     return nil
                 }
                 .first
@@ -1554,9 +1592,9 @@ final class MenuBarItemManager {
                 // bails when window IDs are unchanged, so this is cheap when
                 // the item already showed up on the first pass. A cancelled
                 // sleep skips the remaining re-checks.
-                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
+                guard await (try? Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
-                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
+                guard await (try? Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
             }
         }
@@ -2031,7 +2069,7 @@ extension MenuBarItemManager {
         /// Returns the matched candidate indices (1 or 2 of them, in
         /// hidden/always-hidden order), or `nil` when no own-process
         /// candidate correlates confidently with any AX frame.
-        nonisolated static func selectViaAXFrame(
+        static nonisolated func selectViaAXFrame(
             candidates: [CandidateFrame],
             axFrames: [CGRect]
         ) -> [Int]? {
@@ -2046,7 +2084,9 @@ extension MenuBarItemManager {
                     })
                 else { continue }
                 matchedIndices.append(candidate.index)
-                if matchedIndices.count == 2 { break }
+                if matchedIndices.count == 2 {
+                    break
+                }
             }
             return matchedIndices.isEmpty ? nil : matchedIndices
         }
@@ -2796,7 +2836,7 @@ extension MenuBarItemManager {
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
         cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
         cacheActor.updateCachedControlCenterGenericWindowIDs(
-            Set(items.filter { $0.tag.isControlCenterGenericItem }.map(\.windowID))
+            Set(items.filter(\.tag.isControlCenterGenericItem).map(\.windowID))
         )
 
         await MainActor.run {
@@ -3173,7 +3213,9 @@ extension MenuBarItemManager {
         }
 
         var recoverySuggestion: String? {
-            if case .itemNotMovable = self { return nil }
+            if case .itemNotMovable = self {
+                return nil
+            }
             return "Please try again. If the error persists, please file a bug report."
         }
 
@@ -3733,7 +3775,9 @@ extension MenuBarItemManager {
                 firstLocation: context.firstLocation
             )
             storeInnerTask(innerTask, in: state.innerTaskHolder)
-            if Task.isCancelled { innerTask.cancel() }
+            if Task.isCancelled {
+                innerTask.cancel()
+            }
         }
     }
 
@@ -4420,7 +4464,7 @@ extension MenuBarItemManager {
     /// whether to suppress, rescue-and-retry, or alert (and with which
     /// message). Precedence: reaching the position beats being blocked;
     /// being blocked beats missing control items.
-    nonisolated static func classifyHiddenDragFailure(
+    static nonisolated func classifyHiddenDragFailure(
         reachedPosition: Bool,
         isBlocked: Bool,
         controlItemsMissing: Bool
@@ -4627,7 +4671,8 @@ extension MenuBarItemManager {
                 // could never earn the success that clears its record.
                 if let error = error as? EventError,
                    error.indicatesUnresponsiveOwner,
-                   failureLedger.isUnresponsive(item) {
+                   failureLedger.isUnresponsive(item)
+                {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) failed the way it always does, aborting move"
                     )
@@ -5151,20 +5196,26 @@ extension MenuBarItemManager {
     /// item into *that* section, and once macOS persists the position the
     /// item stays there across relaunches. Items that can never be hidden are
     /// the common case — Control Center modules such as `AudioVideoModule`
-    /// come and go as the mic or camera is used, and since the item list is
-    /// in Window Server order rather than left-to-right order, a freshly
-    /// created window can land next to one from anywhere in the bar.
+    /// come and go as the mic or camera is used, and even with the items
+    /// sorted into left-to-right order, the physically adjacent item can
+    /// belong to another section.
     private func getReturnDestination(
         for item: MenuBarItem,
         in items: [MenuBarItem],
         section: MenuBarSection.Name
     ) -> (destination: MoveDestination, fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?)? {
-        guard let index = items.firstIndex(matching: item.tag) else {
+        // The anchor math below treats index adjacency as physical
+        // adjacency, but the item list arrives in Window Server order.
+        // Sort by each item's leading edge so successor/predecessor mean
+        // the item's actual on-screen neighbors.
+        let orderedItems = items.sorted { $0.bounds.minX < $1.bounds.minX }
+
+        guard let index = orderedItems.firstIndex(matching: item.tag) else {
             return nil
         }
 
-        let eligibleIndices = Set(items.indices.filter { candidateIndex in
-            let candidate = items[candidateIndex]
+        let eligibleIndices = Set(orderedItems.indices.filter { candidateIndex in
+            let candidate = orderedItems[candidateIndex]
             guard candidate.canBeHidden else {
                 return false
             }
@@ -5173,7 +5224,7 @@ extension MenuBarItemManager {
 
         let anchors = LayoutSolver.returnAnchors(
             forIndex: index,
-            itemCount: items.count,
+            itemCount: orderedItems.count,
             eligibleIndices: eligibleIndices
         )
 
@@ -5181,13 +5232,13 @@ extension MenuBarItemManager {
         // nearest eligible neighbor on the opposite side.
         if let successor = anchors.successor {
             let fallback: (MenuBarItemTag, pid_t)? = anchors.predecessor.map { predecessor in
-                let neighbor = items[predecessor]
+                let neighbor = orderedItems[predecessor]
                 return (neighbor.tag, neighbor.sourcePID ?? neighbor.ownerPID)
             }
-            return (.leftOfItem(items[successor]), fallback)
+            return (.leftOfItem(orderedItems[successor]), fallback)
         }
         if let predecessor = anchors.predecessor {
-            return (.rightOfItem(items[predecessor]), nil)
+            return (.rightOfItem(orderedItems[predecessor]), nil)
         }
 
         // The section holds no other item to anchor against, so aim at the
@@ -6139,8 +6190,12 @@ extension MenuBarItemManager {
             switch decision {
             case let .move(item, destination):
                 let targetSection: MenuBarSection.Name = {
-                    if case let .section(section) = entry.kind { return section }
-                    if case let .waitForRelaunch(_, section) = entry.kind { return section }
+                    if case let .section(section) = entry.kind {
+                        return section
+                    }
+                    if case let .waitForRelaunch(_, section) = entry.kind {
+                        return section
+                    }
                     return .hidden
                 }()
                 MenuBarItemManager.diagLog.info(
@@ -6873,6 +6928,22 @@ extension MenuBarItemManager {
         itemOrder: [String: [String]]
     ) {
         guard case .profile = source else { return }
+
+        // Snapshot the displaced state before overwriting so a cancelled
+        // apply can roll back to what disk still holds (persistence is
+        // deferred to persistProfileStateOnSuccess). The token pins the
+        // snapshot to this apply: once a newer apply re-arms, the
+        // displaced apply no longer owns the state and must not restore.
+        profileApplyToken &+= 1
+        priorProfileApplySnapshot = ProfileApplySnapshot(
+            token: profileApplyToken,
+            pinnedHidden: pinnedHiddenBundleIDs,
+            pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
+            sectionOrder: savedSectionOrder,
+            profileLayout: activeProfileLayout,
+            profileItemIdentifiers: activeProfileItemIdentifiers
+        )
+
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
         savedSectionOrder = sectionOrder
@@ -6888,6 +6959,34 @@ extension MenuBarItemManager {
             itemOrder: itemOrder
         )
         activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
+    }
+
+    /// Rolls back the in-memory profile state after a cancelled apply,
+    /// but only when the cancelled apply still owns it (no newer apply
+    /// has re-armed since). Ownership is checked via the apply token: a
+    /// newer arm bumps the token, so the late-arriving cancellation of
+    /// the displaced apply leaves the newer apply's state — including
+    /// its in-flight flag — untouched.
+    private func restoreProfileStateAfterCancelledApply(token: Int) {
+        guard token == profileApplyToken,
+              let snapshot = priorProfileApplySnapshot,
+              snapshot.token == token
+        else {
+            MenuBarItemManager.diagLog.debug(
+                "applyProfileLayout: cancelled apply no longer owns the armed profile state, skipping rollback"
+            )
+            return
+        }
+        pinnedHiddenBundleIDs = snapshot.pinnedHidden
+        pinnedAlwaysHiddenBundleIDs = snapshot.pinnedAlwaysHidden
+        savedSectionOrder = snapshot.sectionOrder
+        activeProfileLayout = snapshot.profileLayout
+        activeProfileItemIdentifiers = snapshot.profileItemIdentifiers
+        priorProfileApplySnapshot = nil
+        isApplyingProfileLayout = false
+        MenuBarItemManager.diagLog.info(
+            "applyProfileLayout: cancelled mid-apply, rolled back in-memory profile state to the last committed profile"
+        )
     }
 
     /// Refreshes the cached active-profile spec to match a freshly saved
@@ -6932,6 +7031,8 @@ extension MenuBarItemManager {
         guard case .profile = source else { return }
         persistPinnedBundleIDs()
         persistSavedSectionOrder()
+        // Committed: the pre-arm snapshot can no longer be rolled back to.
+        priorProfileApplySnapshot = nil
     }
 
     /// Refreshes profileSortedItemIdentifiers from the supplied item
@@ -7030,7 +7131,9 @@ extension MenuBarItemManager {
         // Bail before arming any profile state if cancellation arrived
         // during the settling wait (a newer apply has replaced us via
         // applyProfile's layoutTask?.cancel()).
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         // MARK: Phase 1: persist state and arm in-flight flags
 
@@ -7048,6 +7151,12 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
+
+        // Token identifying this apply's ownership of the armed profile
+        // state. Captured immediately after arming, before any await can
+        // let a newer apply re-arm. Only meaningful for the .profile
+        // source (the cancellation rollback below is gated on it).
+        let applyToken = profileApplyToken
 
         // Prevent the cache cycle from saving intermediate positions.
         // Shared across both sources: the apply moves items in flight
@@ -7357,8 +7466,8 @@ extension MenuBarItemManager {
             activeHasNotch: activeMenuBarScreen?.hasNotch ?? false,
             activeIsMainDisplay: activeIsMainDisplay
         ),
-           let screen = activeMenuBarScreen,
-           let notch = screen.frameOfNotch
+            let screen = activeMenuBarScreen,
+            let notch = screen.frameOfNotch
         {
             let budget = Self.computeNotchOverflowBudget(
                 items: items,
@@ -7525,7 +7634,9 @@ extension MenuBarItemManager {
 
                 let isControlUID = uid == hiddenCtrlUID || uid == ahCtrlUID
                 guard let item = freshItems.first(where: {
-                    if isControlUID { return $0.uniqueIdentifier == uid }
+                    if isControlUID {
+                        return $0.uniqueIdentifier == uid
+                    }
                     return $0.uniqueIdentifier == uid && isProfileItem($0)
                 }) else {
                     MenuBarItemManager.diagLog.debug("Profile layout (full sort): \(uid) not found, skipping")
@@ -7965,6 +8076,18 @@ extension MenuBarItemManager {
         // isApplyingProfileLayout flag are only meaningful when a
         // profile is active; the savedOrder source leaves them alone.
         items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        // A cancelled profile apply (a newer apply replaced us via
+        // applyProfile's layoutTask?.cancel()) must not commit anything:
+        // roll back the in-memory profile state to the last committed
+        // profile so the late-arrival re-sort path doesn't keep sorting
+        // toward the cancelled spec, and skip the deferred cache refresh
+        // (the apply that replaced us schedules its own at exit). The
+        // rollback is token-guarded: if the newer apply has already
+        // re-armed the state, it is left untouched.
+        if Task.isCancelled, case .profile = source {
+            restoreProfileStateAfterCancelledApply(token: applyToken)
+            return
+        }
         // Commit profile state to disk only if we weren't cancelled
         // mid-Phase-6. The in-loop cancellation guards break out of the
         // move loop but execution still flows into Phase 7; without
@@ -8021,20 +8144,20 @@ extension MenuBarItemManager {
     /// live `NSStatusItem`. The counter resets to zero both on the first
     /// successful lookup and immediately after a rebuild is triggered, so
     /// this fires at most once per failure streak.
-    nonisolated static func shouldRebuildControlItems(
+    static nonisolated func shouldRebuildControlItems(
         consecutiveFailures: Int,
         threshold: Int = MenuBarItemManager.controlItemRebuildThreshold
     ) -> Bool {
         consecutiveFailures >= threshold
     }
 
-    nonisolated static func baseIdentifier(forSavedIdentifier identifier: String) -> String {
+    static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {
         let parts = identifier.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
         guard parts.count >= 2 else { return identifier }
         return "\(parts[0]):\(parts[1])"
     }
 
-    nonisolated static func savedLayoutSectionLookup(
+    static nonisolated func savedLayoutSectionLookup(
         savedSectionOrder: [String: [String]]
     ) -> (
         exact: [String: MenuBarSection.Name],
@@ -8131,7 +8254,7 @@ extension MenuBarItemManager {
     /// which on a notched display drifts items into always-hidden. A display
     /// switch is not a layout edit, so it must not advance the gate; the
     /// divergence check still runs and catches genuine section drift.
-    nonisolated static func windowIDsChanged(
+    static nonisolated func windowIDsChanged(
         previous: Set<CGWindowID>,
         current: Set<CGWindowID>,
         previousDisplayID: CGDirectDisplayID?,
@@ -8162,7 +8285,7 @@ extension MenuBarItemManager {
     /// notch-hidden stragglers legitimately resolve to nil, so a minority
     /// share is normal; only a majority signals a resolution failure. The
     /// item-count floor keeps degenerate tiny sets from tripping the gate.
-    nonisolated static func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
+    static nonisolated func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
@@ -8190,7 +8313,7 @@ extension MenuBarItemManager {
     /// - Returns: Whether this observation confirms the divergence (i.e.
     ///   should trigger the apply), and the pending-observation state to
     ///   carry forward to the next cycle.
-    nonisolated static func confirmedDivergence(
+    static nonisolated func confirmedDivergence(
         divergedNow: Bool,
         pendingSince: ContinuousClock.Instant?,
         now: ContinuousClock.Instant,

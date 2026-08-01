@@ -327,7 +327,11 @@ final class MenuBarSearchPanel: NSPanel {
 
     /// Toggles the panel's visibility.
     func toggle() {
-        if isVisible { close() } else { show() }
+        if isVisible {
+            close()
+        } else {
+            show()
+        }
     }
 
     /// Dismisses the search panel.
@@ -394,8 +398,8 @@ final class MenuBarSearchPanel: NSPanel {
         )
 
         let keyString = "\(Defaults.Key.menuBarSearchPanelFrameWithConfig.rawValue)\(uuidString)"
-        UserDefaults.standard.set(relativeFrame.dictionaryRepresentation as NSDictionary, forKey: keyString)
-        UserDefaults.standard.synchronize()
+        Defaults.store.set(relativeFrame.dictionaryRepresentation as NSDictionary, forKey: keyString)
+        Defaults.store.synchronize()
     }
 
     /// Loads the saved frame for a specific display.
@@ -405,7 +409,7 @@ final class MenuBarSearchPanel: NSPanel {
         }
         let keyString = "\(Defaults.Key.menuBarSearchPanelFrameWithConfig.rawValue)\(uuidString)"
 
-        guard let frameDict = UserDefaults.standard.dictionary(forKey: keyString) else {
+        guard let frameDict = Defaults.store.dictionary(forKey: keyString) else {
             return nil
         }
 

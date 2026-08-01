@@ -66,9 +66,14 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     @MainActor
     func apply(to settings: GeneralSettings) {
         settings.showIceIcon = showIceIcon
-        settings.lastCustomIceIcon = lastCustomIceIcon
         settings.customIceIconIsTemplate = customIceIconIsTemplate
         settings.iceIcon = iceIcon
+        // Assigned after `iceIcon`, not before. Setting a `.custom` icon makes
+        // that property's `didSet` mirror the new value into
+        // `lastCustomIceIcon`, so assigning first meant the snapshot's own
+        // value was immediately overwritten and every profile carrying a custom
+        // icon came back with the two fields identical.
+        settings.lastCustomIceIcon = lastCustomIceIcon
         settings.useIceBar = useIceBar
         settings.useIceBarOnlyOnNotchedDisplay = useIceBarOnlyOnNotchedDisplay
         settings.iceBarLocation = iceBarLocation
@@ -326,8 +331,19 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     /// Resolves the ordering representation used by the layout apply path.
     /// Profiles written before `itemOrder` was added contain the equivalent
     /// `savedSectionOrder` representation, so preserve their layout intent.
+    ///
+    /// An *empty* `itemOrder` falls back too, not just a missing one.
+    /// `captureCurrentLayout` derives `itemOrder` from the item manager's
+    /// cache, which is empty while the menu bar is still settling, so a
+    /// capture taken at the wrong moment writes `[:]` rather than `nil`. Under
+    /// a plain `??` that empty dictionary shadows a perfectly good
+    /// `savedSectionOrder`, and the next apply sees no layout at all. Treating
+    /// it as absent also repairs profiles already written that way.
     var resolvedItemOrder: [String: [String]] {
-        itemOrder ?? savedSectionOrder
+        guard let itemOrder, !itemOrder.isEmpty else {
+            return savedSectionOrder
+        }
+        return itemOrder
     }
 
     /// Resolves per-item section assignments for both current and legacy
@@ -351,41 +367,22 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
 // MARK: - ProfileContent
 
 /// Groups all settings data for a profile, used to reduce init parameter count.
+///
+/// The initializer is left to synthesis rather than written out. The defaults
+/// below carry the same values the explicit initializer supplied, and the
+/// synthesized memberwise initializer takes its parameter order from the
+/// property order here, so every call site is unaffected.
 nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
-    var globalDisplayConfiguration: DisplayIceBarConfiguration
-    var confirmSpacingRelaunch: Bool
-    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    var globalDisplayConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+    var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+    var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
-
-    init(
-        generalSettings: GeneralSettingsSnapshot,
-        advancedSettings: AdvancedSettingsSnapshot,
-        hotkeys: [String: Data],
-        displayConfigurations: [String: DisplayIceBarConfiguration],
-        globalDisplayConfiguration: DisplayIceBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
-        confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch,
-        unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope,
-        appearanceConfiguration: MenuBarAppearanceConfigurationV2,
-        menuBarLayout: MenuBarLayoutSnapshot,
-        automation: ProfileAutomation? = nil
-    ) {
-        self.generalSettings = generalSettings
-        self.advancedSettings = advancedSettings
-        self.hotkeys = hotkeys
-        self.displayConfigurations = displayConfigurations
-        self.globalDisplayConfiguration = globalDisplayConfiguration
-        self.confirmSpacingRelaunch = confirmSpacingRelaunch
-        self.unconfirmedSpacingProfileScope = unconfirmedSpacingProfileScope
-        self.appearanceConfiguration = appearanceConfiguration
-        self.menuBarLayout = menuBarLayout
-        self.automation = automation
-    }
 }
 
 // MARK: - Profile
