@@ -5,13 +5,17 @@
   <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?style=flat-square&label=latest&color=555555" /></a>
   <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge" /></a>
   <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://img.shields.io/badge/translated-20_languages-555555?style=flat-square&logo=crowdin&logoColor=white" /></a>
   <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
   <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/thaw-app/Thaw?style=flat-square&color=555555" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge" /></a>
+  <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 2" src="https://img.shields.io/badge/SLSA-Build_L2-555555?style=flat-square" /></a>
 </p>
 
 <p align="center">
