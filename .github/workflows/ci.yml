@@ -186,6 +186,17 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+      # Persist the last successful report so docs/chore pushes (code=false) can
+      # still feed Sonar. Without this, those scans omit coverageReportPaths and
+      # Sonar's Zero Coverage Sensor publishes 0% for the whole branch.
+      # Key omits runner.os so the Linux sonarqube job can restore a macOS save.
+      - name: Cache Coverage XML for Sonar reuse
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: coverage.xml
+          key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
+
   # Always run so Scorecard SAST sees a Sonar-related check on nearly every PR,
   # including docs/chore changes that skip the macOS build. Forks no-op without
   # secrets (same job name keeps required checks satisfiable).
@@ -214,13 +225,42 @@ jobs:
         with:
           name: coverage-data
 
-      # coverage.xml only exists when the macOS build ran. Passing the property
-      # unconditionally would point the scanner at a missing file on docs/chore
-      # PRs, so it is supplied here rather than in sonar-project.properties.
+      # Docs/chore scans skip the macOS build, so reuse the last report cached
+      # for this branch (or the PR base / development). Prefer that over
+      # analyzing with no report — Sonar would otherwise publish 0% coverage.
+      - name: Restore cached Coverage XML
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: coverage.xml
+          key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            sonar-coverage-${{ github.ref_name }}-
+            sonar-coverage-${{ github.base_ref || 'development' }}-
+            sonar-coverage-development-
+          fail-on-cache-miss: false
+
+      - name: Resolve Sonar coverage args
+        if: env.SONAR_ENABLED == 'true'
+        id: coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f coverage.xml ]]; then
+            echo "args=-Dsonar.coverageReportPaths=coverage.xml" >> "$GITHUB_OUTPUT"
+            echo "Using coverage.xml ($(wc -c < coverage.xml | tr -d ' ') bytes)"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+            echo "::warning::No coverage.xml available; Sonar will publish zero coverage for this analysis."
+          fi
+
+      # coverage.xml only exists when this run built tests or restored a cached
+      # report. Never put sonar.coverageReportPaths in sonar-project.properties:
+      # a missing file would fail the scanner on cold branches.
       - name: SonarQube Scan
         if: env.SONAR_ENABLED == 'true'
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: ${{ needs.changes.outputs.code == 'true' && '-Dsonar.coverageReportPaths=coverage.xml' || '' }}
+          args: ${{ steps.coverage.outputs.args }}
