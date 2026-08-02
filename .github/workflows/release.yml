@@ -73,7 +73,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: xcode-27
+    runs-on: macos-26
     # Trust boundary: required reviewers on the `release` Environment
     # (diazdesandi). Other org owners can still unblock via admin bypass.
     # Secrets are not consumed until approval.
