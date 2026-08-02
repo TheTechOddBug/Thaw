@@ -51,6 +51,17 @@ on:
         required: false
         type: boolean
         default: false
+      release_notes:
+        description: >-
+          Optional manual override for release notes (Markdown/HTML). If left
+          blank, notes are auto-extracted from the CHANGELOG.md section for this
+          tag (Keep a Changelog style: "## [tag]"). Used for both the Thaw
+          GitHub Release body and the Sparkle appcast description. Multi-line
+          text is easiest via `gh workflow run release.yml -f release_notes="$(cat notes.md)"`
+          — the web UI's field is single-line.
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   # Dry runs publish nothing, so they must not queue behind — or block — a real release.
@@ -134,6 +145,49 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           echo "tag=$TAG_NAME channel=$channel prerelease=$prerelease"
+
+      - name: Resolve release notes
+        id: notes
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import uuid
+
+          tag = os.environ["TAG"]
+          notes = os.environ.get("RELEASE_NOTES_INPUT", "")
+          source = "release_notes input"
+
+          # Falls back to the CHANGELOG.md section for this tag (Keep a Changelog
+          # style: "## [1.2.3]" or "## 1.2.3", ending at the next "## " heading)
+          # only when no manual notes were supplied at dispatch time.
+          if not notes.strip() and os.path.isfile("CHANGELOG.md"):
+              text = open("CHANGELOG.md", encoding="utf-8").read()
+              heading = re.compile(
+                  r"^##\s+\[?" + re.escape(tag) + r"\]?.*$", re.MULTILINE
+              )
+              match = heading.search(text)
+              if match:
+                  rest = text[match.end():]
+                  next_heading = re.search(r"^##\s+", rest, re.MULTILINE)
+                  section = rest[: next_heading.start()] if next_heading else rest
+                  notes = section.strip()
+                  source = "CHANGELOG.md"
+              else:
+                  source = f"none (no CHANGELOG.md section for {tag})"
+          elif not notes.strip():
+              source = "none (no release_notes input, no CHANGELOG.md)"
+
+          delimiter = f"notes_{uuid.uuid4().hex}"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"body<<{delimiter}\n{notes}\n{delimiter}\n")
+
+          print(f"Release notes source: {source}")
+          PY
 
       - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
@@ -245,6 +299,7 @@ jobs:
           updates-repository: ${{ env.UPDATES_REPOSITORY }}
           updates-token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
           release-html-url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
+          release-notes: ${{ steps.notes.outputs.body }}
           publish-appcast: "false"
 
       - name: Collect update assets
@@ -316,6 +371,7 @@ jobs:
             ${{ steps.sbom-meta.outputs.path }}
             ${{ steps.sbom-meta.outputs.path }}.sigstore.json
             ${{ steps.sbom-meta.outputs.path }}.sha256
+          body: ${{ steps.notes.outputs.body }}
           generate_release_notes: false
           # Always a draft here. attach-provenance flips it to published once the
           # attestation bundles are attached (and only when publish_release is
