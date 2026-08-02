@@ -202,6 +202,26 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
+    /// A marker titled with Control Center's own bundle identifier must not
+    /// resolve an icon to Control Center. The owning-PID path already rejects
+    /// it; the title-lookup path must too, or the icon gets a *resolved* CC
+    /// PID, reads as a transient CC widget (canBeHidden false), and drops out
+    /// of profile management — past every unresolved-sourcePID gate.
+    @Test("A Control-Center-titled marker resolves nothing")
+    func controlCenterTitledMarkerResolvesNothing() {
+        let icons = [icon(windowID: 1, title: "Item-0")]
+        let markers = [marker(windowID: 2, title: "com.apple.controlcenter", owningPID: 1117)]
+        let result = MarkerPairResolver.resolve(
+            unresolvedIcons: icons,
+            markers: markers,
+            thawBundleID: thawBundleID,
+            ccBundleID: ccBundleID,
+            pidToBundleID: { _ in self.ccBundleID },
+            bundleIDToPID: { $0 == self.ccBundleID ? 1117 : nil }
+        )
+        #expect(result == [])
+    }
+
     /// Two unresolved icons share the same size and there are two
     /// markers of that size: the ambiguity is unresolvable, so no
     /// pairings emit. Prevents the cross-attribution where an icon
@@ -231,6 +251,33 @@ struct MarkerPairResolverTests {
                 return nil
             },
             bundleIDToPID: { _ in nil }
+        )
+        #expect(result == [])
+    }
+
+    /// One marker cannot be claimed by several same-size icons: the
+    /// first icon to claim the marker wins, the others are rejected.
+    @Test("One marker cannot be claimed by several same-width icons")
+    func oneMarkerCannotBeClaimedBySeveralIcons() {
+        let size = CGSize(width: 38, height: 30)
+        let icons = [
+            icon(windowID: 34, title: "Sound", size: size),
+            icon(windowID: 90, title: "WiFi", size: size),
+            icon(windowID: 243, title: "Item-0", size: size),
+        ]
+        let markers = [marker(
+            windowID: 3059,
+            title: "com.sindresorhus.Pure-Paste",
+            size: CGSize(width: 38, height: 33),
+            owningPID: 1117 // Control Center
+        )]
+        let result = MarkerPairResolver.resolve(
+            unresolvedIcons: icons,
+            markers: markers,
+            thawBundleID: thawBundleID,
+            ccBundleID: ccBundleID,
+            pidToBundleID: { pid in pid == 1117 ? self.ccBundleID : "com.sindresorhus.Pure-Paste" },
+            bundleIDToPID: { $0 == "com.sindresorhus.Pure-Paste" ? 1877 : nil }
         )
         #expect(result == [])
     }
@@ -494,6 +541,14 @@ struct HostedItemOwnershipTests {
         )
     }
 
+    @Test("A malformed vendor-only title never matches")
+    func malformedVendorOnlyTitleNeverMatches() {
+        // "pl.maketheweb." splits to ["pl", "maketheweb", ""], clearing the
+        // three-component guard. Without the empty-component rejection the
+        // trailing "" is a prefix of "cleanshotx" and the pair matches.
+        #expect(!HostedItemOwnership.titleIndicatesOwner("pl.maketheweb.", bundleID: "pl.maketheweb.cleanshotx"))
+    }
+
     // MARK: - Reject: unrelated neighbors that sat within the radius
 
     @Test("WireGuard does not match Updatest")
@@ -534,5 +589,24 @@ struct HostedItemOwnershipTests {
     func nilAndEmptyTitleNeverMatch() {
         #expect(!HostedItemOwnership.titleIndicatesOwner(nil, bundleID: "codes.rambo.AirBuddyHelper"))
         #expect(!HostedItemOwnership.titleIndicatesOwner("", bundleID: "codes.rambo.AirBuddyHelper"))
+    }
+
+    @Test("A bare app-name title matches its bundle's last component")
+    func bareAppNameMatchesLastComponent() {
+        // windowID 3511 in the rc2 log: title "BetterTouchTool", AX child 15pt
+        // // away in com.hegenberg.BetterTouchTool, refused for lack of shape.
+        #expect(HostedItemOwnership.titleIndicatesOwner("BetterTouchTool", bundleID: "com.hegenberg.BetterTouchTool"))
+        }
+
+    @Test("A bare vendor component never matches")
+    func bareVendorComponentNeverMatches() {
+            #expect(!HostedItemOwnership.titleIndicatesOwner("hegenberg", bundleID: "com.hegenberg.BetterTouchTool"))
+    }
+
+    @Test("A bare title must equal the app component exactly")
+    func bareTitleMustEqualAppComponentExactly() {
+        // Substring agreement is not enough — "Clock" is a Control Center module.
+        #expect(!HostedItemOwnership.titleIndicatesOwner("Clock", bundleID: "com.fabriceleyne.theclock"))
+        #expect(!HostedItemOwnership.titleIndicatesOwner("Sound", bundleID: "com.rogueamoeba.soundsource"))
     }
 }
