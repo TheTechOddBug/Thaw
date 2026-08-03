@@ -12,6 +12,10 @@ updates:
     assignees:
       - "diazdesandi"
     target-branch: "development"
+    groups:
+      swift:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -24,3 +28,7 @@ updates:
     assignees:
       - "diazdesandi"
     target-branch: "development"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

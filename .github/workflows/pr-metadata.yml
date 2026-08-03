@@ -6,6 +6,8 @@ name: "PR Metadata"
 # Crowdin sync PRs are skipped — they are translation-only and often huge.
 # They are matched on head branch + same-repo + maintainer association, never on
 # PR title, so an untrusted fork cannot title its way past the checks.
+# Dependabot/Renovate PRs are skipped — they use bot PR bodies (no template) and
+# are identified by verified bot login only, never by title.
 #
 # Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
 # the job summary only — never PR comments — so pushes don't bump the timeline.
@@ -53,8 +55,22 @@ jobs:
               core.info('Skipping PR metadata for Crowdin sync PR.');
             }
 
+      # Dependabot/Renovate use their own PR bodies (no Closes:/template checkboxes).
+      # Match verified bot logins only — never titles — so forks cannot skip checks.
+      - name: Detect bot dependency PR
+        id: bot_deps
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const login = context.payload.pull_request?.user?.login || '';
+            const isBotDeps = login === 'dependabot[bot]' || login === 'renovate[bot]';
+            core.setOutput('is_bot_deps', isBotDeps ? 'true' : 'false');
+            if (isBotDeps) {
+              core.info(`Skipping PR metadata for bot dependency PR (${login}).`);
+            }
+
       - name: Apply labels from PR template and changed paths
-        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true' && steps.bot_deps.outputs.is_bot_deps != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -242,7 +258,7 @@ jobs:
             }
 
       - name: Check PR conventions and post summary comment
-        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true' && steps.bot_deps.outputs.is_bot_deps != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
