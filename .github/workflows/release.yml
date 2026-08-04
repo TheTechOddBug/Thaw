@@ -6,8 +6,11 @@ name: Release
 #
 # Artifact split:
 #   - thaw-app/Thaw releases: DMG, cosign bundles, CycloneDX SBOM, SLSA provenance
-#   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
+#     (+ Sparkle ZIP/deltas during cutover dual-publish; remove after 2–3 releases)
+#   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml (canonical)
 #   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
+# Appcast enclosure URLs for new items point at thaw-app/updates; Thaw copies are
+# a belt-and-suspenders mirror only.
 #
 # Build provenance is signed in attest-build-provenance.yml (reusable), not in
 # this job, so the signing identity is separate from the macOS build trust
@@ -319,7 +322,7 @@ jobs:
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           cat "$list" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "Update assets (thaw-app/updates):"
+          echo "Update assets (dual-publish: thaw-app/updates + thaw-app/Thaw):"
           cat "$list"
 
       - name: Create updates GitHub Release (ZIP + deltas)
@@ -360,11 +363,15 @@ jobs:
           cosign sign-blob --bundle "${SBOM_PATH}.sigstore.json" "$SBOM_PATH"
           ls -la "${DMG_PATH}.sigstore.json" "${SBOM_PATH}.sigstore.json"
 
-      - name: Create Thaw GitHub Release (DMG + SBOM)
+      - name: Create Thaw GitHub Release (DMG + SBOM + Sparkle payloads)
         if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          # softprops v3 uses the token input (env GITHUB_TOKEN is ignored).
+          token: ${{ github.token }}
           tag_name: ${{ steps.meta.outputs.tag }}
+          # Cutover: also attach ZIP/deltas here for 2–3 releases. Canonical
+          # Sparkle downloads remain thaw-app/updates (appcast enclosure URLs).
           files: |
             build/${{ env.DMG_NAME }}
             build/${{ env.DMG_NAME }}.sigstore.json
@@ -372,6 +379,7 @@ jobs:
             ${{ steps.sbom-meta.outputs.path }}
             ${{ steps.sbom-meta.outputs.path }}.sigstore.json
             ${{ steps.sbom-meta.outputs.path }}.sha256
+            ${{ steps.update-assets.outputs.files }}
           body: ${{ steps.notes.outputs.body }}
           generate_release_notes: false
           # Always a draft here. attach-provenance flips it to published once the
@@ -379,8 +387,6 @@ jobs:
           # checked), so a failed attestation cannot ship an unattested release.
           draft: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish appcast to updates gh-pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
@@ -533,6 +539,8 @@ jobs:
           s ""
           s "## Would upload to \`${GITHUB_REPOSITORY}\` (release \`${TAG}\`)"
           s ""
+          s "Installer + attestations, plus Sparkle ZIP/deltas during cutover dual-publish."
+          s ""
           s "| Asset | Size | SHA-256 |"
           s "| --- | ---: | --- |"
           for f in "build/${DMG_NAME}" "build/${DMG_NAME}.sha256" "$SBOM_PATH" "${SBOM_PATH}.sha256"; do
@@ -543,9 +551,19 @@ jobs:
           s "| \`${SBOM_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
           s "| \`${DMG_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
           s "| \`${SBOM_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
+          while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            if [[ -f "$f" ]]; then
+              s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
+            else
+              s "| \`$(basename "$f")\` | _missing_ | — |"
+            fi
+          done <<< "$UPDATE_FILES"
 
           s ""
           s "## Would upload to \`${UPDATES_REPO}\` (release \`${TAG}\`)"
+          s ""
+          s "Canonical Sparkle payloads (appcast enclosure URLs point here)."
           s ""
           s "| Asset | Size |"
           s "| --- | ---: |"

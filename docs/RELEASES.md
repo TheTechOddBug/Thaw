@@ -7,7 +7,8 @@ How Thaw ships installers vs in-app updates.
 | What | Where | URL pattern |
 | --- | --- | --- |
 | **Appcast** (`appcast.xml`) | [`thaw-app/updates`](https://github.com/thaw-app/updates) GitHub Pages | `https://thaw-app.github.io/updates/appcast.xml` |
-| **Update payloads** (Sparkle ZIP + deltas, all channels) | `thaw-app/updates` GitHub Releases | `https://github.com/thaw-app/updates/releases/download/<tag>/…` |
+| **Update payloads** (Sparkle ZIP + deltas, all channels) | `thaw-app/updates` GitHub Releases (**canonical**; appcast enclosures) | `https://github.com/thaw-app/updates/releases/download/<tag>/…` |
+| **Update payloads (cutover mirror)** | Also attached to `thaw-app/Thaw` releases for ~2–3 releases | same files, Thaw release URLs (not used by appcast) |
 | **DMG** (human installer) + **SBOM** + Sigstore bundles + SLSA provenance | [`thaw-app/Thaw`](https://github.com/thaw-app/Thaw) GitHub Releases only | `https://github.com/thaw-app/Thaw/releases/…` |
 
 The app polls the appcast (`SUFeedURL` in `Thaw/Resources/Info.plist`). Sparkle
@@ -28,7 +29,7 @@ flowchart LR
   end
 
   subgraph thawRepo["thaw-app/Thaw"]
-    ThawRel["GitHub Releases<br/>DMG + SBOM + provenance"]
+    ThawRel["GitHub Releases<br/>DMG + SBOM + provenance<br/>+ ZIP/deltas (cutover)"]
     CI["Release workflow"]
   end
 
@@ -39,7 +40,7 @@ flowchart LR
   Human --> ThawRel
 
   CI -->|"publish ZIP/deltas + appcast"| updatesRepo
-  CI -->|"publish DMG + SBOM + provenance"| ThawRel
+  CI -->|"publish DMG + SBOM + provenance<br/>+ ZIP/deltas mirror"| ThawRel
 ```
 
 ## In-app update path
@@ -65,13 +66,23 @@ payloads.
 3. Create Sparkle ZIP (and deltas when prior ZIPs exist).
 4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
 5. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
-   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256`.
-6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
+   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256`, and (during
+   cutover) the same Sparkle ZIP + deltas as a mirror.
+6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
+   URLs point at `updates`, not the Thaw mirror).
 7. Sign build provenance for the DMG and SBOM in the reusable
    [`attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
    workflow (a signing identity separate from the macOS build job); attach
    `*.intoto.jsonl` to the draft, then publish it when **Publish release** is
    checked.
+
+### Cutover dual-publish
+
+For the first ~2–3 releases after moving Sparkle hosting to `thaw-app/updates`,
+ZIP and deltas are uploaded to **both** repos. The appcast keeps a single
+enclosure URL per file, pointing at `updates`. The Thaw copies are a safety net
+only — remove the Thaw Sparkle attachments once a couple of updates-hosted
+releases have shipped cleanly.
 
 The release is drafted in step 5 and published in step 7 so that a failed
 attestation leaves an unpublished draft rather than a public release with no

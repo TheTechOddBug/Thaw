@@ -44,6 +44,8 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Do not persist layouts with an unresolved always-hidden divider (#849).
 - Do not persist notch-overflow ejections as user intent (#790 / #796, thanks @lathe-agent-oa).
 - Skip bulk apply while source PIDs are unresolved (#784 / #785, thanks @lathe-agent-oa).
+- Refuse saved-layout bulk apply while the hidden-section dividers are collapsed / zero-width — same `hiddenSectionHasRoom` gate the save path already uses — so a collapsed reading cannot drag the whole hidden section and then get persisted (#868 / #876, thanks @TheBenMeadows).
+- Revalidate hidden-section geometry before the move batch runs so apply does not proceed on a stale collapsed reading (#876).
 - Prefer exact saved identifiers; avoid ambiguous multi-instance divergence matches (#714 / #716, thanks @t4sh).
 - Defer apply/persist on unsettled or cross-display geometry; clear stuck profile flags (#702, #717, #743).
 - Restore unresolved-`sourcePID` gate in `applySavedLayout`.
@@ -159,7 +161,7 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 Thanks to everyone who landed fixes in this RC:
 
-@alvst · @andredlng · @auspic7 · @cbguder · @danielhopkins · @davidnichols-ops · @eli-yip · @hxu · @lathe-agent-oa · @ShiroKSH · @subway-jack · @t4sh · @VailElla · @ZeterMordio
+@alvst · @andredlng · @auspic7 · @cbguder · @danielhopkins · @davidnichols-ops · @eli-yip · @hxu · @lathe-agent-oa · @ShiroKSH · @subway-jack · @t4sh · @TheBenMeadows · @VailElla · @ZeterMordio
 
 ---
 
@@ -167,7 +169,7 @@ Thanks to everyone who landed fixes in this RC:
 
 | Area | Issues |
 |------|--------|
-| Layout / identity / persist | #702, #705, #709, #714, #717, #718, #776, #778, #783, #784, #789, #790, #795, #826, #828, #849, #863 |
+| Layout / identity / persist | #702, #705, #709, #714, #717, #718, #776, #778, #783, #784, #789, #790, #795, #826, #828, #849, #863, #868 |
 | Notch / overflow | #570, #808 |
 | Moves / cursor / Hot Corners | #625, #723, #736, #744, #746, #750, #766 |
 | Control items / hidden section | #740, #754, #859 |
@@ -178,7 +180,7 @@ Thanks to everyone who landed fixes in this RC:
 | Closed as duplicate | #727 |
 | Closed without code change (stale / upstream / not planned / user-resolved) | #571, #610, #649, #664, #707, #720, #721, #722, #726, #851, #852 |
 
-Related merged fix PRs called out above include #716, #741, #749, #756, #774, #779, #781, #782, #785, #796, #797, #809, #810, #813, #820, #821, #822, #838, #842, #856, #860, #862. Reliability stack landed via #811 → revert #857 → re-land #858.
+Related merged fix PRs called out above include #716, #741, #749, #756, #774, #779, #781, #782, #785, #796, #797, #809, #810, #813, #820, #821, #822, #838, #842, #856, #860, #862, #876. Reliability stack landed via #811 → revert #857 → re-land #858.
 
 ---
 
