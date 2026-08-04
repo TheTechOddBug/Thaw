@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   changes:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-slim
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -57,6 +58,7 @@ jobs:
 
   static_analysis:
     needs: changes
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -99,6 +101,7 @@ jobs:
             swiftlint --strict
 
   build:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: macos-26
     needs: [changes, static_analysis]
     env:
@@ -202,6 +205,7 @@ jobs:
   # no-op without secrets (same job name keeps required checks satisfiable).
   sonarqube:
     needs: [changes, build]
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-latest
     env:
       # Forks and Dependabot get no SONAR_TOKEN on pull_request.

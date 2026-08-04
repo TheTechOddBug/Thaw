@@ -36,6 +36,7 @@ permissions:
 
 jobs:
   attest:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-latest
     permissions:
       id-token: write

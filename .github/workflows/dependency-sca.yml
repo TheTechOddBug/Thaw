@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   dependency-sca:
+    if: github.repository == 'thaw-app/Thaw'
     name: dependency-sca
     runs-on: ubuntu-latest
     permissions:

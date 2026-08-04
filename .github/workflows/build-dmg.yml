@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build-dmg:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: macos-26
     env:
       APP_NAME: "Thaw.app"

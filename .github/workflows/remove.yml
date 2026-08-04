@@ -7,6 +7,7 @@ permissions:
 
 jobs:
   remove-skipped-runs:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-slim
     permissions:
       actions: write

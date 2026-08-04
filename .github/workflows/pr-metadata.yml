@@ -25,6 +25,7 @@ permissions:
 
 jobs:
   metadata:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-slim
     permissions:
       contents: read

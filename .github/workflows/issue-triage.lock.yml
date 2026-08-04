@@ -1609,6 +1609,7 @@ jobs:
             }
 
   pre_activation:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-slim
     env:
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}

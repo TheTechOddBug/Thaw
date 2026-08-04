@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   trigger-build:
-    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '.build')
+    if: ${{ github.repository == 'thaw-app/Thaw' && github.event.issue.pull_request && startsWith(github.event.comment.body, '.build') }}
     runs-on: ubuntu-slim
     permissions:
       actions: write

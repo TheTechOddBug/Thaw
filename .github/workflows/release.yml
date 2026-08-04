@@ -76,6 +76,7 @@ permissions:
 
 jobs:
   release:
+    if: github.repository == 'thaw-app/Thaw'
     runs-on: macos-26
     # Trust boundary: required reviewers on the `release` Environment
     # (diazdesandi). Other org owners can still unblock via admin bypass.
@@ -653,7 +654,7 @@ jobs:
   # Skipped on dry run: attestations are permanent Sigstore / GitHub records.
   attest-dmg:
     needs: release
-    if: ${{ !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
     permissions:
       id-token: write
       attestations: write
@@ -665,7 +666,7 @@ jobs:
 
   attest-sbom:
     needs: release
-    if: ${{ !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
     permissions:
       id-token: write
       attestations: write
@@ -677,7 +678,7 @@ jobs:
 
   attach-provenance:
     needs: [release, attest-dmg, attest-sbom]
-    if: ${{ !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
