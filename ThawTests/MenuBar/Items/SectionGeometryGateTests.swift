@@ -164,3 +164,117 @@ struct SectionGeometryGateTests {
         #expect(LayoutSolver.shouldPersistSavedOrder(.init()))
     }
 }
+
+/// Exercises the #868 geometry gate through `applySavedLayout` itself, rather
+/// than through the predicate it consults.
+///
+/// The predicate tests above pin the arithmetic; they cannot show that the
+/// apply path asks the question. That wiring is the part that regressed:
+/// `saveSectionOrder` refused the collapsed reading while `applySavedLayout`
+/// dispatched a bulk apply on it. Both cases below feed the same bar,
+/// the same saved layout and the same change trigger — only the divider
+/// geometry differs — so a failure isolates the gate and nothing else.
+///
+/// Serialized because each case drives a real `MenuBarItemManager` and swaps
+/// the process-wide `Defaults.store`.
+@MainActor
+@Suite("Section geometry apply gate", .serialized)
+struct SectionGeometryApplyGateTests {
+    /// Six ordinary app items, all with resolved source PIDs so the
+    /// unresolved-identity gate stays clear.
+    private static func makeItems() -> [MenuBarItem] {
+        (0 ..< 6).map { index in
+            MenuBarItem.fixture(
+                tag: .appItem(bundleID: "com.example.app\(index)", title: "Item\(index)"),
+                windowID: CGWindowID(500 + index),
+                bounds: CGRect(x: -5743 + Double(index) * 24, y: 0, width: 24, height: 22)
+            )
+        }
+    }
+
+    /// Builds a manager whose saved layout puts every item in hidden.
+    ///
+    /// `savedSectionOrder` is private and is only loaded from disk by
+    /// `performSetup`, which needs a live `AppState`. Arming a profile is the
+    /// one test-visible writer; concluding it immediately afterwards clears
+    /// `isApplyingProfileLayout`, which would otherwise short-circuit
+    /// `applySavedLayout` before it reaches the geometry gate.
+    private func makeManager(savingAllOf items: [MenuBarItem]) -> MenuBarItemManager {
+        let order = [
+            "visible": [String](),
+            "hidden": items.map(\.uniqueIdentifier),
+            "alwaysHidden": [String](),
+        ]
+        let manager = MenuBarItemManager()
+        manager.armProfileState(
+            source: .profile,
+            pinnedHidden: [],
+            pinnedAlwaysHidden: [],
+            sectionOrder: order,
+            itemSectionMap: [:],
+            itemOrder: order
+        )
+        manager.concludeProfileApplyWithoutMoves(source: .profile, items: [])
+        return manager
+    }
+
+    /// A previous window ID that is absent from the current bar, which is the
+    /// app-quit signal that advances the change gate immediately (no
+    /// two-cycle divergence confirmation to wait for).
+    private static let departedWindowID: CGWindowID = 999_999
+
+    /// The apply path must refuse the geometry `applyPathBypassGeometryHasNoRoom`
+    /// describes. `false` is the whole assertion: the only `return true` in
+    /// `applySavedLayout` sits after the `applyProfileLayout` dispatch, so a
+    /// `false` return is exactly "the shared apply was never entered".
+    @Test("Collapsed dividers stop the apply before it dispatches", .timeLimit(.minutes(1)))
+    func collapsedGeometryBlocksTheApply() async throws {
+        try await withScratchDefaults { _ in
+            let items = Self.makeItems()
+            let manager = makeManager(savingAllOf: items)
+            // AlwaysHidden.maxX == Hidden.minX == -5743, with 6 items saved
+            // hidden: the field incident's shape at fixture scale.
+            let collapsed = MenuBarItemManager.ControlItemPair.fixture(
+                hiddenAt: CGRect(x: -5743, y: 0, width: 10, height: 22),
+                alwaysHiddenAt: CGRect(x: -5753, y: 0, width: 10, height: 22)
+            )
+
+            let didApply = await manager.applySavedLayout(
+                items: items,
+                previousWindowIDs: [Self.departedWindowID],
+                controlItems: collapsed
+            )
+
+            #expect(
+                !didApply,
+                "A collapsed hidden section must refuse the bulk apply instead of dragging the misread section"
+            )
+        }
+    }
+
+    /// The other half of the gate: with the dividers apart, the same inputs
+    /// reach the dispatch. Without this, a gate that refused everything would
+    /// pass the test above.
+    @Test("A healthy gap lets the same apply through", .timeLimit(.minutes(1)))
+    func healthyGeometryReachesTheApply() async throws {
+        try await withScratchDefaults { _ in
+            let items = Self.makeItems()
+            let manager = makeManager(savingAllOf: items)
+            let healthy = MenuBarItemManager.ControlItemPair.fixture(
+                hiddenAt: CGRect(x: -5743, y: 0, width: 10, height: 22),
+                alwaysHiddenAt: CGRect(x: -6000, y: 0, width: 10, height: 22)
+            )
+
+            let didApply = await manager.applySavedLayout(
+                items: items,
+                previousWindowIDs: [Self.departedWindowID],
+                controlItems: healthy
+            )
+
+            #expect(
+                didApply,
+                "Healthy divider geometry must still dispatch the bulk apply"
+            )
+        }
+    }
+}

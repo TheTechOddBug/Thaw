@@ -7538,6 +7538,36 @@ extension MenuBarItemManager {
             notchOverflowEjectedUIDs.removeAll()
         }
 
+        // Re-check the divider geometry the saved-order dispatch already
+        // refused, this time against the bounds this apply actually planned
+        // from. applySavedLayout tests the cache cycle's snapshot, but Phase 2
+        // re-reads every item from the Window Server, so the dividers can
+        // collapse in between — and it is *these* bounds that classified the
+        // sections above. A collapse means findSection misread the whole
+        // hidden section as .visible, so the moves below would drag it to the
+        // wrong side of the dividers and, by separating them, un-trip the
+        // saveSectionOrder gate so the next cycle persists the damage (#868).
+        // Refusing here leaves the bar untouched; the change gate re-fires via
+        // layout divergence once the geometry recovers.
+        //
+        // Profile applies are exempt: their hidden count is a target, not a
+        // description of the current bar, so a profile that fills a
+        // currently-empty hidden section legitimately runs against dividers
+        // that sit adjacent because nothing is between them yet.
+        if case .savedOrder = source,
+           !LayoutSolver.hiddenSectionHasRoom(
+               hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+               alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
+               savedHiddenItemCount: itemOrder[sectionKey(for: .hidden)]?.count ?? 0
+           )
+        {
+            MenuBarItemManager.diagLog.warning(
+                "applyProfileLayout: skipping (savedOrder); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil"))"
+            )
+            clearProfileState(source: source, items: items)
+            return
+        }
+
         // MARK: Phase 5: choose execution strategy (full-sort vs LCS)
 
         // On notched displays, use a full-section rearrange instead of
