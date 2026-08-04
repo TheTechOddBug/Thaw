@@ -198,19 +198,19 @@ jobs:
           key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
 
   # Always run so Scorecard SAST sees a Sonar-related check on nearly every PR,
-  # including docs/chore changes that skip the macOS build. Forks no-op without
-  # secrets (same job name keeps required checks satisfiable).
+  # including docs/chore changes that skip the macOS build. Forks / Dependabot
+  # no-op without secrets (same job name keeps required checks satisfiable).
   sonarqube:
     needs: [changes, build]
     runs-on: ubuntu-latest
     env:
-      # Forks get no secrets on pull_request, so the scan cannot run there.
-      SONAR_ENABLED: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      # Forks and Dependabot get no SONAR_TOKEN on pull_request.
+      SONAR_ENABLED: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     steps:
-      - name: Skip SonarQube for fork PRs
+      - name: Skip SonarQube for fork / Dependabot PRs
         if: env.SONAR_ENABLED != 'true'
         run: |
-          echo "Skipping SonarQube analysis for PR from fork"
+          echo "Skipping SonarQube analysis (fork or Dependabot PR; no SONAR_TOKEN access)"
           echo "Analysis will be performed after merge to the default branch"
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
