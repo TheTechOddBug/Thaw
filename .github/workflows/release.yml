@@ -326,6 +326,9 @@ jobs:
         if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          # v3 ignores env GITHUB_TOKEN; token input is required for cross-repo.
+          # UPDATES_GITHUB_TOKEN is a release-environment secret only.
+          token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
           repository: ${{ env.UPDATES_REPOSITORY }}
           tag_name: ${{ steps.meta.outputs.tag }}
           target_commitish: main
@@ -337,8 +340,6 @@ jobs:
             Sparkle update payloads for Thaw `${{ steps.meta.outputs.tag }}`.
 
             Installer DMG: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
 
       # Skipped on a dry run: keyless signing writes a permanent, public entry to
       # the Sigstore transparency log, which cannot be retracted afterwards.

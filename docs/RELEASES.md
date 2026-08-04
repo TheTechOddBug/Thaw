@@ -82,8 +82,9 @@ unaffected, since Sparkle downloads from `thaw-app/updates`.
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
 Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).
 
-Required secret on Thaw: `UPDATES_GITHUB_TOKEN` (`contents: write` on
-`thaw-app/updates`).
+Required **release-environment** secret on Thaw: `UPDATES_GITHUB_TOKEN`
+(`contents: write` on `thaw-app/updates`). The updates softprops step must
+pass it as the action `token` input — softprops v3 ignores `env: GITHUB_TOKEN`.
 
 ## Dry runs
 
