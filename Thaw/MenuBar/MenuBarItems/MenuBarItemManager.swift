@@ -306,13 +306,35 @@ final class MenuBarItemManager {
     /// Observes `appState.navigationState`'s @Observable properties (wave 3).
     private var navigationStateObservationTask: Task<Void, Never>?
 
+    /// A candidate menu window matched by the open-menu probe.
+    nonisolated struct MenuWindowCandidate: Sendable {
+        let windowID: CGWindowID
+        let bounds: CGRect
+    }
+
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
-    private var menuOpenCheckTask: Task<Bool, Never>?
+    /// Returns the candidate menu windows owned by menu bar item processes;
+    /// persistence filtering happens on the actor.
+    private var menuOpenCheckTask: Task<[MenuWindowCandidate], Never>?
 
     /// The most recent open-menu probe result and its timestamp.
     private var menuOpenCheckCachedResult: Bool?
     private var menuOpenCheckCachedAt: ContinuousClock.Instant?
+
+    /// First-seen timestamps for candidate menu windows, keyed by window ID.
+    /// A real menu is transient; a window that stays on screen longer than
+    /// ``menuWindowPersistenceThreshold`` is persistent furniture (Droppy's
+    /// shelf, notch HUDs) and must not block moves (#879 regression).
+    private var menuWindowFirstSeen: [CGWindowID: ContinuousClock.Instant] = [:]
+
+    /// Whether the open-menu probe has run at least once. Windows already
+    /// on screen at the first probe are grandfathered as persistent.
+    private var hasSeededMenuWindowProbe = false
+
+    /// How long a candidate menu window may stay on screen before it is
+    /// reclassified as persistent furniture rather than an open menu.
+    nonisolated static let menuWindowPersistenceThreshold: Duration = .seconds(30)
 
     /// Timer for lightweight periodic cache checks.
     private var cacheTickCancellable: AnyCancellable?
@@ -6287,13 +6309,13 @@ extension MenuBarItemManager {
 
         if let existingTask = menuOpenCheckTask {
             MenuBarItemManager.diagLog.debug("Menu open check: joining in-flight probe")
-            return await existingTask.value
+            return applyMenuWindowPersistenceFilter(to: await existingTask.value)
         }
 
         let cachedItems = itemCache.managedItems.filter(\.isOnScreen)
         let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
 
-        let task = Task.detached(priority: .utility) { () -> Bool in
+        let task = Task.detached(priority: .utility) { () -> [MenuWindowCandidate] in
             // Get all on-screen windows.
             let windows = WindowInfo.createWindows(option: .onScreen)
             let potentialMenuWindows = windows.filter { window in
@@ -6313,7 +6335,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug(
                     "Menu open check: no candidate menu windows on screen"
                 )
-                return false
+                return []
             }
 
             let fastPathPIDs = Set(cachedItems.compactMap { item -> pid_t? in
@@ -6333,7 +6355,7 @@ extension MenuBarItemManager {
                 """
             )
 
-            let fastPathResult = potentialMenuWindows.contains { window in
+            let fastPathMatches = potentialMenuWindows.filter { window in
                 let isMenuOpen = fastPathPIDs.contains(window.ownerPID)
                 if isMenuOpen {
                     MenuBarItemManager.diagLog.debug(
@@ -6347,9 +6369,9 @@ extension MenuBarItemManager {
                 return isMenuOpen
             }
 
-            if fastPathResult {
-                MenuBarItemManager.diagLog.debug("Menu open check result: true (fast path)")
-                return true
+            if !fastPathMatches.isEmpty {
+                MenuBarItemManager.diagLog.debug("Menu open check: \(fastPathMatches.count) candidate windows (fast path)")
+                return fastPathMatches.map { MenuWindowCandidate(windowID: $0.windowID, bounds: $0.bounds) }
             }
 
             let unresolvedWindows = WindowInfo.createWindows(
@@ -6365,8 +6387,8 @@ extension MenuBarItemManager {
             )
 
             guard !unresolvedWindows.isEmpty else {
-                MenuBarItemManager.diagLog.debug("Menu open check result: false (fast path)")
-                return false
+                MenuBarItemManager.diagLog.debug("Menu open check: no candidate windows (fast path)")
+                return []
             }
 
             MenuBarItemManager.diagLog.debug(
@@ -6376,7 +6398,7 @@ extension MenuBarItemManager {
             let resolvedPIDs = await MenuBarItemManager.resolveAllSourcePIDs(for: unresolvedWindows)
 
             let precisePIDs = fastPathPIDs.union(resolvedPIDs)
-            let result = potentialMenuWindows.contains { window in
+            let preciseMatches = potentialMenuWindows.filter { window in
                 let isMenuOpen = precisePIDs.contains(window.ownerPID)
                 if isMenuOpen {
                     MenuBarItemManager.diagLog.debug(
@@ -6391,14 +6413,15 @@ extension MenuBarItemManager {
             }
 
             MenuBarItemManager.diagLog.debug(
-                "Menu open check result: \(result) (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
+                "Menu open check: \(preciseMatches.count) candidate windows (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
             )
-            return result
+            return preciseMatches.map { MenuWindowCandidate(windowID: $0.windowID, bounds: $0.bounds) }
         }
 
         menuOpenCheckTask = task
-        let result = await task.value
+        let matchedWindowIDs = await task.value
         menuOpenCheckTask = nil
+        let result = applyMenuWindowPersistenceFilter(to: matchedWindowIDs)
         // Cache negative results too: bulk move operations (applyProfileLayout)
         // call this guard once per move, and re-enumerating on-screen windows
         // for every move when no menu is open is the common, expensive case.
@@ -6406,6 +6429,74 @@ extension MenuBarItemManager {
         menuOpenCheckCachedResult = result
         menuOpenCheckCachedAt = .now
         return result
+    }
+
+    /// Updates first-seen tracking for the matched candidate windows and
+    /// returns whether any of them is fresh enough — or currently under the
+    /// pointer — to be a real open menu.
+    private func applyMenuWindowPersistenceFilter(to candidates: [MenuWindowCandidate]) -> Bool {
+        let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
+            candidates: candidates,
+            pointerLocation: CGEvent(source: nil)?.location,
+            firstSeen: menuWindowFirstSeen,
+            now: .now,
+            isFirstProbe: !hasSeededMenuWindowProbe,
+            threshold: MenuBarItemManager.menuWindowPersistenceThreshold
+        )
+        menuWindowFirstSeen = outcome.updatedFirstSeen
+        hasSeededMenuWindowProbe = true
+        if !outcome.ignoredPersistentWindowIDs.isEmpty {
+            MenuBarItemManager.diagLog.debug(
+                "Menu open check: ignoring \(outcome.ignoredPersistentWindowIDs.count) persistent candidate window(s) \(outcome.ignoredPersistentWindowIDs.sorted())"
+            )
+        }
+        MenuBarItemManager.diagLog.debug("Menu open check result: \(outcome.isMenuOpen)")
+        return outcome.isMenuOpen
+    }
+
+    /// Pure classification core for the open-menu probe: a candidate window
+    /// counts as an open menu while it is young, or at any age while the
+    /// pointer is inside it (a user interacting with a long-open menu, or
+    /// mid-drop on a shelf). Real menus are transient; persistent
+    /// status-level windows (Droppy's shelf, notch HUDs) stay on screen for
+    /// the app's whole lifetime and previously deferred every move
+    /// indefinitely. Windows already on screen at the first probe are
+    /// grandfathered as persistent, and entries for windows that
+    /// disappeared are pruned so a reused window ID starts fresh.
+    nonisolated static func classifyMenuWindowCandidates(
+        candidates: [MenuWindowCandidate],
+        pointerLocation: CGPoint?,
+        firstSeen: [CGWindowID: ContinuousClock.Instant],
+        now: ContinuousClock.Instant,
+        isFirstProbe: Bool,
+        threshold: Duration
+    ) -> (
+        isMenuOpen: Bool,
+        updatedFirstSeen: [CGWindowID: ContinuousClock.Instant],
+        ignoredPersistentWindowIDs: Set<CGWindowID>
+    ) {
+        let matchedWindowIDs = Set(candidates.map(\.windowID))
+        var updatedFirstSeen = firstSeen.filter { matchedWindowIDs.contains($0.key) }
+        let firstSeenForNewWindows = isFirstProbe ? now - threshold : now
+        var isMenuOpen = false
+        var ignored = Set<CGWindowID>()
+        for candidate in candidates {
+            let firstSeenAt: ContinuousClock.Instant
+            if let existing = updatedFirstSeen[candidate.windowID] {
+                firstSeenAt = existing
+            } else {
+                firstSeenAt = firstSeenForNewWindows
+                updatedFirstSeen[candidate.windowID] = firstSeenAt
+            }
+            let isYoung = firstSeenAt.duration(to: now) < threshold
+            let isUnderPointer = pointerLocation.map(candidate.bounds.contains) ?? false
+            if isYoung || isUnderPointer {
+                isMenuOpen = true
+            } else {
+                ignored.insert(candidate.windowID)
+            }
+        }
+        return (isMenuOpen, updatedFirstSeen, ignored)
     }
 
     private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
@@ -7737,15 +7828,18 @@ extension MenuBarItemManager {
             // values for the same windowID if section.show()'s control-item
             // moves landed in between, which surfaces as an empty Phase 1
             // view of currently-occupied hidden / always-hidden sections.
+            var currentVisibleSet = Set<String>()
             var currentHiddenSet = Set<String>()
             var currentAHSet = Set<String>()
             for item in items where isProfileItem(item) {
                 switch sectionByWindowID[item.windowID] {
+                case .visible:
+                    currentVisibleSet.insert(item.uniqueIdentifier)
                 case .hidden:
                     currentHiddenSet.insert(item.uniqueIdentifier)
                 case .alwaysHidden:
                     currentAHSet.insert(item.uniqueIdentifier)
-                case .visible, nil:
+                case nil:
                     break
                 }
             }
@@ -7754,8 +7848,10 @@ extension MenuBarItemManager {
             let desiredAHSet = Set(itemOrder["alwaysHidden"] ?? [])
             // Logged for the log-replay harness so the desired visible set is
             // captured rather than inferred from current visible minus control
-            // items and unresolved orphans. Not consulted by Phase 1's section
-            // arithmetic, which only crosses hidden and always-hidden.
+            // items and unresolved orphans. Also feeds the hidden-divider
+            // boundary check below; the crossSectionMoves / totalSectionMismatch
+            // arithmetic that follows still only crosses hidden and
+            // always-hidden.
             let desiredVisibleSet = Set(itemOrder["visible"] ?? [])
 
             // Check if AH_ctrl needs to move: items changing between hidden↔alwaysHidden.
@@ -7776,6 +7872,25 @@ extension MenuBarItemManager {
             let needsHiddenMove = currentAHSet.intersection(desiredHiddenSet)
             let needsAHMove = currentHiddenSet.intersection(desiredAHSet)
             let totalSectionMismatch = needsHiddenMove.count + needsAHMove.count
+
+            // Items on the wrong side of H_ctrl. Both tallies above intersect
+            // against currentHiddenSet / currentAHSet, so a bar whose hidden
+            // divider has drifted past every managed item — leaving both sets
+            // empty while the profile wants a full hidden section — scores
+            // zero on both and falls through to the LCS. The LCS is blind to
+            // it too: the dividers are stripped from its sequences, so a
+            // divider-only divergence leaves current equal to desired and
+            // plans no moves, and the apply reports "all items already in
+            // correct positions" while the whole hidden section stays visible
+            // (#879). One H_ctrl move fixes every one of them.
+            let hiddenBoundaryMismatch = LayoutSolver.hiddenBoundaryMismatch(
+                currentVisible: currentVisibleSet,
+                currentHidden: currentHiddenSet,
+                currentAlwaysHidden: currentAHSet,
+                desiredVisible: desiredVisibleSet,
+                desiredHidden: desiredHiddenSet,
+                desiredAlwaysHidden: desiredAHSet
+            )
 
             // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
             // Changing this string breaks log-replay regression tests.
@@ -7803,6 +7918,63 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredVisible=\(desiredVisibleSet.sorted())"
             )
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
+            MenuBarItemManager.diagLog.debug(
+                "Profile layout Phase 1: hiddenBoundaryMismatch=\(hiddenBoundaryMismatch)"
+            )
+
+            // ── Sub-phase 0: Move H_ctrl to the visible/hidden boundary ──
+            //
+            // Runs before the AH_ctrl placement so the always-hidden planning
+            // below sees a divider pair that already brackets the right set of
+            // items. Both dividers move by the same mechanism: one drag that
+            // re-sections everything it crosses, which is why neither is left
+            // to the per-item LCS pass.
+            if hiddenBoundaryMismatch > 0, !Task.isCancelled {
+                MenuBarItemManager.diagLog.debug(
+                    "Profile layout: \(hiddenBoundaryMismatch) item(s) on the wrong side of H_ctrl, moving H_ctrl to the boundary"
+                )
+
+                let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let liveMovableUIDs = Set(
+                    allFreshItems.lazy.filter { $0.isMovable && isProfileItem($0) }.map(\.uniqueIdentifier)
+                )
+                let anchor = LayoutSolver.planHiddenDividerAnchor(
+                    desiredHidden: itemOrder["hidden"] ?? [],
+                    desiredVisible: itemOrder["visible"] ?? [],
+                    liveMovableUIDs: liveMovableUIDs
+                )
+
+                if let hItem = allFreshItems.first(where: { $0.uniqueIdentifier == hiddenCtrlUID }),
+                   let anchor
+                {
+                    let anchorUID = switch anchor {
+                    case let .rightOf(uid), let .leftOf(uid): uid
+                    }
+                    if let anchorItem = allFreshItems.first(where: { $0.uniqueIdentifier == anchorUID }) {
+                        let dest: MoveDestination = switch anchor {
+                        case .rightOf: .rightOfItem(anchorItem)
+                        case .leftOf: .leftOfItem(anchorItem)
+                        }
+                        MenuBarItemManager.diagLog.debug("Profile layout: moving H_ctrl → \(dest.logString)")
+                        do {
+                            try await move(item: hItem, to: dest, skipInputPause: true)
+                            movedCount += 1
+                            try? await Task.sleep(for: .milliseconds(200))
+                        } catch {
+                            MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
+                        }
+                    }
+                } else {
+                    // No live movable member on either side to anchor against;
+                    // the LCS pass below still runs against whatever ordering
+                    // divergence remains.
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: no anchor available for the H_ctrl boundary move"
+                    )
+                }
+            }
 
             if crossSectionMoves > 0 || totalSectionMismatch > 0, let ahCtrlUID {
                 // Moving AH_ctrl to the correct position is 1 move that
