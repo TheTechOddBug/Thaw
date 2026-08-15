@@ -105,7 +105,7 @@ struct SettingsResetterTests {
         }
     }
 
-    /// Regression: `resetAdvanced()` used to omit seven persisted
+    /// Regression: `resetAdvanced()` used to omit six persisted
     /// `AdvancedSettings` booleans, so a reset silently left them at whatever
     /// the user had toggled them to. Each previously-omitted boolean is flipped
     /// off its default, reset, then checked back to `Defaults.DefaultValue`.
@@ -118,7 +118,6 @@ struct SettingsResetterTests {
             settings.advanced.useOptionClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
             settings.advanced.useDoubleClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
             settings.advanced.enableSecondaryContextMenuQuit = !Defaults.DefaultValue.enableSecondaryContextMenuQuit
-            settings.advanced.useLCSSortingOnNotchedDisplays = !Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
             settings.advanced.enableMenuBarItemOverflow = !Defaults.DefaultValue.enableMenuBarItemOverflow
             settings.advanced.useThawBarOnNotchOverflow = !Defaults.DefaultValue.useThawBarOnNotchOverflow
             settings.advanced.useAXClickDelivery = !Defaults.DefaultValue.useAXClickDelivery
@@ -131,7 +130,6 @@ struct SettingsResetterTests {
             #expect(settings.advanced.useOptionClickToShowAlwaysHiddenSection == Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection)
             #expect(settings.advanced.useDoubleClickToShowAlwaysHiddenSection == Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection)
             #expect(settings.advanced.enableSecondaryContextMenuQuit == Defaults.DefaultValue.enableSecondaryContextMenuQuit)
-            #expect(settings.advanced.useLCSSortingOnNotchedDisplays == Defaults.DefaultValue.useLCSSortingOnNotchedDisplays)
             #expect(settings.advanced.enableMenuBarItemOverflow == Defaults.DefaultValue.enableMenuBarItemOverflow)
             #expect(settings.advanced.useThawBarOnNotchOverflow == Defaults.DefaultValue.useThawBarOnNotchOverflow)
             #expect(settings.advanced.useAXClickDelivery == Defaults.DefaultValue.useAXClickDelivery)
