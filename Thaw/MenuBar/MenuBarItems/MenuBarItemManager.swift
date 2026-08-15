@@ -4163,8 +4163,8 @@ extension MenuBarItemManager {
     /// cancellation exits promptly so a newer apply can replace this one;
     /// the caller re-checks `Task.isCancelled` immediately afterwards.
     ///
-    /// Off by default; enable with:
-    ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int <milliseconds>
+    /// On by default at 300 ms; disable with:
+    ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int 0
     private nonisolated func waitForBulkApplyIdleWindow() async {
         let thresholdMs = (Defaults.object(forKey: .bulkApplyIdleThresholdMs) as? Int)
             ?? Defaults.DefaultValue.bulkApplyIdleThresholdMs
