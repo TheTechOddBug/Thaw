@@ -9,6 +9,147 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ## [Unreleased]
 
+## [2.0.0]
+
+Please report issues at
+[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+Hey everyone. Thaw 2.0 rebuilds the app around macOS 26 (Tahoe): Liquid
+Glass throughout, a redesigned settings surface, an automation layer built
+on `thaw://`, and a menu bar pipeline rewritten around item identity,
+layout persistence, and knowing when to leave the bar alone. The cycle is
+sixteen releases long: `1.3.0-beta.1` shipped Settings Profiles in April,
+fifteen betas followed it, and six release-candidate builds carried the
+work home. Nearly everything after beta.15 came out of field logs — real
+menu bars misbehaving in ways no test caught. This entry walks the whole
+run by theme; the RC sections below keep the detailed per-fix notes.
+
+---
+
+### Highlights
+
+#### Built for macOS 26
+
+- Native Tahoe support with the Liquid Glass design system across the main app, Settings, Search, and onboarding, including the glass tour for first launch.
+- New macOS 26-style app icon designed and delivered by @JamesLautner (issue #5), with the clear-mode display refinement reported by @a35hie (#616).
+- The minimum deployment target is now macOS 26. Systems on macOS 14 or 15 stay on the 1.x line (#427).
+
+#### Profiles & Focus
+
+The feature that started the cycle, from `1.3.0-beta.1`, implemented by @nightah:
+
+- Save your entire Thaw configuration as a profile and switch instantly — create, duplicate, rename, and delete profiles; import and export them for backup or sharing; update an existing profile with the current layout, configuration, or both.
+- Display Auto-Switch applies a display's assigned profile when you connect it.
+- Focus Filter integration switches profiles as Focus modes activate and restores the previous one after.
+- Profile hotkeys switch between favourites from the keyboard.
+- Later in the cycle: capture previews next to the key behaviours (#887), Update All marks a profile active when its capture matches the running state (#904), applying a profile uses that profile's spacing offset (#903), snapshots became forward-compatible so new settings cannot break old files, legacy layouts import (#778, #779), and the layout cache re-arms when the active profile changes (#679).
+
+#### Automation
+
+- The `thaw://` scheme reads and writes settings, including doubles, enums, and per-display keys, with live UI sync.
+- `thaw://authorize` triggers the permissions dialog without a settings operation, and `thaw://get?key=version` returns app version and build without whitelist auth.
+- ThawCtl, a companion test app, drives the URI scheme from the command line with a `thawctl://` callback.
+- Pre/post apply script hooks run globally or per profile, with configurable timeouts, environment variables such as `THAW_PROFILE_NAME`, non-blocking failures, and their own Automation pane.
+- Per-item global hotkeys open any menu bar item's menu, across all sections; Electron and Chromium items go through an AX press, and bindings persist in profiles (#148).
+- A version copy button in About puts the build identifier on the clipboard.
+
+#### Menu bar appearance
+
+- Configurable background and shape tint: none, solid, or gradient with light/dark variants, a Regular/Clear glass picker backed by `NSGlassEffectView`, borders, shadows, and opacity sliders. Tints render behind menu bar items at user-chosen opacity.
+- Adaptive modes sample the wallpaper color behind the bar per display, cache colors before sleep, restore them on wake without a white flash, and stagger recapture for slow external displays until the color settles.
+- The `.notch` shape kind splits the background at the physical notch, with a notch margin slider (0–15 px) and four-corner end-cap control; it behaves as full width on displays without a notch.
+- Per-display menu bar spacing applies dynamically, preserves settings for disconnected displays, skips the full relaunch when only resolution changed (#551), warns before spacing relaunches with the choice saved per profile (#691), prompts before first apply, and falls back to a global template.
+
+#### Thaw Bar & IceBar
+
+- Horizontal, vertical, and grid layouts; left/right alignment options; panel resizing that follows its content; pill shapes that match the container; grid columns with per-column max widths.
+- Independent shape and border settings for the overlay versus Thaw Bar (#248), and a per-display option to route only the always-hidden section to Thaw Bar (#751).
+- Item reveal survives CPU load, a grace period stops the "no items" flash on display changes, and the live window ID is re-checked after sleep.
+- Icon foreground colors adapt to each screen's menu bar background, including notched MacBooks and secondary displays.
+
+#### Item identity & restoration
+
+- Section restoration follows one deterministic path — baseIdentifier match to saved order, else macOS placement — replacing the namespace fallbacks that pulled unsaved items visible on restart. Blocked items are skipped instead of forced, and placed items stop drifting back into the new-items section.
+- Startup settling waits on source-PID resolution rather than timers, auto-relocation is suppressed while settling runs, and stale PID resolution can no longer mis-namespace items after cmd-drag moves.
+- A serialized cache gate prevents concurrent rebuild races, and lightweight 60-second polling catches late-registering items from background-only apps that never become frontmost.
+- The item cache re-checks after every app launch so late arrivals sort into place, confirms stability across two reads, and keeps `displayID` handling off the main thread.
+- LayoutReconciler consolidated the scattered icon-restore paths into one phase-based orchestrator with deferred post-apply refreshes and chevron position persistence.
+- Menu bar height queries lost the `-1` sentinel that poisoned the height cache, and item bounds verify against the window server so temporary system items (recording indicators, mic, camera) leave no stale ghosts.
+
+#### Control Center–hosted items
+
+- MarkerPairResolver identifies proxies hosted by Control Center (Little Snitch among them) through width-matched marker windows.
+- On single-display Macs a headless virtual display forces marker windows to publish, resolving those widgets to their real owners (#643); the phantom display was later hardened to 640×480 off-main, held briefly, with a one-strike blacklist (#661), and it never appears in Thaw's own display enumeration. Orphans stay put — they are never relocated.
+- Title-offset items (AirBuddy, SpamSieve, Cotypist) resolve by corroborated title with a width backstop, system status-item clones are excluded regardless of namespace (#662), and generic slots stay unresolved for the marker pass rather than guessing (#690).
+
+#### Notch overflow
+
+- Items that would hide behind the notch on MacBook displays are properly managed, ejected to Thaw Bar instead of lost (from `1.3.0-beta.1`).
+- Overflow budgeting stopped double-counting spacing that ejected correctly-placed profile items at default settings, runs only against settled geometry (#681), and keeps the visible control item in place during ejection.
+
+#### Interaction & everyday fixes
+
+- Clicking File, Edit, View no longer trips show-on-click, hover, or scroll behaviours; event monitors health-check and recover themselves instead of dying until relaunch.
+- Synthetic clicks keep out of Hot Corners and Show Desktop, restore the cursor reliably, and rehide logic stops stuck items saturating rehide or spinning popup detection.
+- The always-hidden section answers option-click, double-click on the Thaw icon (configurable), and ctrl/option clicks on empty space; transient Live Activities and Game Mode agents are excluded from search, moves, and profile budgets.
+- Right-click context menus work on secondary displays, quit lives in the secondary menu with ⌥-hold switching it to Restart Thaw, and a localized Support menu item links help resources.
+- The search panel keeps its text between openings if asked, regains focus from the hotkey, and lets sections reorder and filter; layout-bar drags land across sections cleanly without false move alerts.
+- Settings gained sidebar auto-fit, freed window sizing, per-pane polish, hidden dependent toggles when a section is disabled, and an option to disable icon refresh entirely (0 FPS).
+
+#### Performance, memory & platform
+
+- Swift strict concurrency landed in beta.3 and deepened to Swift 6.2 with MainActor default isolation on the app target; locks migrated to `OSAllocatedUnfairLock`.
+- ScreenCaptureKit replaced the SkyLight capture paths that leaked; the XPC item service answers one batch request instead of 40–64 concurrent per-window calls, which ended the jetsam kills; wallpaper capture went away entirely.
+- The image cache got an LRU/concurrency overhaul with lossless disk keys, retain cycles in live refresh were closed, duplicate entries after reconnect removed, and caches rebuild on display connect/disconnect.
+- Icon refresh normalized onto one grid — off, or `1/n` seconds for integer n in 1…30.
+
+#### Distribution, security & localization
+
+- Sparkle payloads publish to `thaw-app/updates`, mirrored to the legacy stonerl Pages feed; DMGs are built with a background image, signed, notarized, and carry SLSA Build L3 provenance.
+- OSV dependency scanning gates releases, CodeQL analysis runs in CI, SonarCloud findings were cleared, explicit Xcode versions pin reproducible builds, and the project holds OpenSSF Best Practices Gold.
+- Crowdin-driven localization with plural-aware strings and separated copy strings for cleaner translation; the tour ships complete in Spanish.
+
+#### Release-candidate reliability work
+
+This was the headline of the RC cycle — deterministic ordering with stable identities replaced the drift that let saved layouts scramble; reorder storms are bounded instead of endless; persist gates stop transient states from being written as user intent; control-item pairing, notch overflow budgeting, scan cost, name memory, and divider recovery were rebuilt from field logs. Cold-start restore works, the 47 GiB memory growth is gone, hidden previews render, and the bar stops repairing itself into collapse. Details live in the RC sections below.
+
+---
+
+### Contributors
+
+Thaw 2.0 was built by Toni Förster (@stonerl), René Jiménez
+(@diazdesandi), and Amir Zarrinkafsh (@nightah), with contributions,
+reports, diagnostics, translations, and patient testing from:
+
+@aliaskar-rockeater · @alvst · @andredlng · @auspic7 · @beantownbytes · @billchirico · @bpresles · @brucemakes012 · @bytepl · @CamilleGuillory · @cbguder · @danielhopkins · @davidnichols-ops · @Daventure91 · @eli-yip · @exsesx · @gitmichaelqiu · @howardhey · @hxu · @JamesLautner · @jamesyc · @Jizzy015 · @kn666 · @kylewhirl · @lathe-agent-oa · @looseboy · @lucifercraig12345-create · @MashnoorKek · @nk-tedo-001 · @SAY-5 · @ShiroKSH · @Skyearn · @slatlasdev · @stu-carter · @subway-jack · @t4sh · @TheBenMeadows · @VailElla · @volcbs · @warmup72 · @wizaard88 · @yoodu · @YuriNachos · @ZeterMordio · @Zophiekat
+
+and every translator working through Crowdin.
+
+Thank you. This release would not exist without you.
+
+---
+
+### Upgrade notes
+
+1. **From 1.x:** Thaw 2.0 requires macOS 26. On macOS 14 or 15 you stay on `1.3.0-beta.1` (#427).
+2. **Per-display spacing:** the schema changed during the beta cycle; older profiles fall back to the active display's value rather than failing to load.
+3. **From any 2.0 RC:** in-place Sparkle update. Failure-ledger marks clear on build change, and an explicit `defaults write` override still beats any shipped default.
+4. **Update feed:** new installs use `thaw-app/updates`; existing installs on the legacy stonerl feed keep receiving the mirrored appcast.
+5. **AX click delivery** is on by default and no longer shown in Settings; `defaults delete com.stonerl.Thaw UseAXClickDelivery` restores that default if you had turned it off during the RCs.
+
+Known issues carried from the RCs are listed at the end of each RC section below.
+
+**Full Changelog**: https://github.com/thaw-app/Thaw/compare/1.3.0-beta.1...2.0.0
+
+### Support
+
+If you find Thaw useful and want to support its development:
+
+- GitHub Sponsors: https://github.com/sponsors/stonerl
+- Ko-fi: https://ko-fi.com/stonerl
+- Patreon: https://www.patreon.com/c/stonerl
+- PayPal: https://www.paypal.me/tonifoerster
+
 ## [2.0.0-rc.5]
 
 Please report issues at
