@@ -9,6 +9,80 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ## [Unreleased]
 
+## [2.0.0-rc.5]
+
+Please report issues at
+[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+This is planned as the last release candidate before 2.0 stable. Almost all
+of it comes out of field logs, and in nearly every report the layout
+machinery damages the arrangement it was trying to restore: a divider
+rebuild swept a healthy bar into the hidden section, a repair loop fought
+the notch overflow eject move by move, a save outran the restore it raced,
+and a lost always-hidden divider went unnoticed while its section drained
+into Visible (#958, #863). A second track drove the scan-cost work: full
+source-PID scans asked every running application for an extras menu bar,
+which made the whole system stutter, and until resolution caught up every
+item answered to "Menu Bar Item" (#956).
+
+---
+
+### Highlights
+
+- **The bar stops repairing itself into collapse** — both hidden-divider recoveries discarded a stale autosave position by writing the fresh-install seed through the guard-bypassing route; the divider landed back beside the visible chevron and the next save persisted the collapsed span. On the five-hour log attached to #958, a routine notch overflow scored one boundary mismatch, the rebuild fired, and three seconds later the visible section held nothing but Thaw's own icon.
+- **Boundary repair moves items instead of dragging the divider across them** — Phase 1 reached for one drag of H_ctrl whenever any managed item read on the wrong side of it. Where that drag would have crossed the entire visible section, the bar collapsed to a 33-point span and the apply still reported a clean classification afterwards. Small mismatches now walk the offending items back to the divider one drag each, and the divider drag is reserved for the empty-side cases it was built for (#879, #958).
+- **The overflow planner and the repair pass stop fighting** — on bars persistently over the notch budget, every apply ejected the same item and then recalled it as wrongly concealed, two synthetic drags per cycle for as long as the bar stayed over budget. This matches the "icons jumping randomly and relocating between layouts" reports. Ejected items are now exempt from the boundary tally until the budget frees up (#958).
+- **Items keep their names while source-PID resolution catches up** — naming requires knowing which process created an item, and the first cache pass deliberately runs without waiting for the accessibility scan; for its duration every item answered to the generic "Menu Bar Item" on hover and in Search. An item now falls back to the name it resolved to last time. Control Center's generic Item-N slots are refused, because their key encodes hosting order rather than identity and a wrong name gets clicked; custom names still take precedence (#956).
+- **Slow item owners get room to answer before Thaw gives up** — the move budget started at 100 ms, but escalation averaged each raise against the standing value, so even eight attempts reached only 476 ms, and every unresponsive-owner failure was filed twice, consuming the ledger's mark threshold in one instant. Defaults are now 250 ms (350 for Bento Boxes), growth is adopted as computed up to a one-second ceiling, failures are filed once, and marking takes three. Fixes the cursor hijack of #687 and the misplaced relaunched items of #960.
+- **Scans stop re-probing every running application** — roughly 16 of ~170 running applications have an extras menu bar, but the negative answer did not survive cache cleanup, so nearly every scan re-probed the full application list at ~400 ms steady-state and ~2.8 s during startup. Negative answers now survive cleanup and launches. A zero-area window can no longer start a scan on its own behalf, and the diagnostic names any app whose probe takes longer than 50 ms (#956).
+- **Hidden previews render again** — orphaned Control Center slots from an earlier Thaw process carry zero width, corrupt the composite-slicing geometry, and discard every preview batch, so all hidden and always-hidden previews in Settings → Layout came back empty (#962, thanks @alvst).
+
+---
+
+### Menu bar & layout
+
+#### Source-PID scanning
+
+- The negative-cache flag was cleared for every reused app on every cache cleanup, and cleanup is driven by `NSWorkspace.runningApplications`, which changes whenever any process starts or exits; the #956 log shows 46 cleanups in seven minutes. The flag is now a deadline that survives cleanup and backs off as consecutive empty checks accumulate. Early rungs stay inside the startup window, so an application that publishes its status item shortly after launch is still found quickly.
+- Consecutive-miss counts are remembered per bundle identifier across launches and seed the first scan of a session, which measured 3.85 s in the log. Seeding is deliberately the ladder's first rung rather than the rung the count earns: memory is trusted to say where to look and never what was found, so skipping an application can reorder work but cannot attribute an item to the wrong owner.
+- A zero-area window has no centre worth comparing against an accessibility frame, yet an unresolved window is what selects scan drivers; one such window started eight of nine scans in seven minutes with nothing else on the bar asking for one. Zero-area windows no longer select themselves. Bounds are re-read on every request, so a window that gains area stops being skipped.
+- Scan summaries now log total wall time and name any single app whose extras-bar probe exceeds 50 ms, since accessibility reads are serviced by the target process and bounded only by the unresponsive timeout.
+
+#### Save gates
+
+- `saveSectionOrder` honours the same five-second post-move cooldown `applySavedLayout` uses, except when the user's own move is the most recent one, so a Layout-editor drag does not undo itself. In the #958 log the save landed one millisecond after the restore stood down.
+- The multi-display gate counted items classified as visible, so a relocation that stranded items in the wrong section erased its own evidence: it fired correctly with sixteen visible items and passed when four were left, which was the save that did the damage. The gate now reads whether the menu bar changed display since the cache cycle being compared, a signal that survives misclassification because it does not read the items at all.
+
+#### Divider recovery
+
+- A hidden-divider rebuild stamps a seed position only when the bar holds no managed items. Discarding the stale `NSStatusItem` is still what gives the divider a window on the current bar, and the follow-up apply walks it to the saved boundary, a move the seeded rebuild could not make anyway while parked off screen (#958).
+- The H_ctrl boundary move no longer anchors on Thaw's own chevron. When every profile item has been dragged to the other side, anchoring on the last remaining candidate drags H_ctrl past it and conceals it; returning nil leaves the boundary alone and hands the work to the per-item LCS pass, which has barred Thaw's own items as anchors since #924. The two nil cases log separately (#958).
+- Parked dividers are measured at their leading edge instead of their centre. A collapsed hidden divider is 5000 points wide, so its centre sat 2500 points right of the divider and read as on-screen on multi-display arrangements, defeating both the parked-divider drag guard (#899) and the rebuild detector; five hours of log recorded neither warning.
+- Chevron relocation and always-hidden control-item ordering skip when the hidden divider fails the on-screen check, so neither drops its target into the parked zone beside a physically parked divider. The existing recovery paths already handle the states these guards refuse.
+- An enabled always-hidden section whose divider stops resolving gets its status item recreated once per episode after three authoritative cycles with no reading, and stored position is kept rather than seeded. Provisional AX-frame correlations never advance, reset, or re-arm the streak. The #863 re-plug log showed `alwaysHidden=nil` on every cycle for 12+ hours while the whole always-hidden section drained into Visible and the collapsed arrangement persisted (#863).
+- The one-pixel drop-point bias now applies to every control-item divider regardless of width. Expanded, thousands-of-points-wide dividers still produced placements landing one point into the wrong section: a divider's width provides visual concealment, not hit-test slack (#923).
+
+---
+
+### Appearance, capture & IceBar
+
+- Preview batches exclude degenerate zero-width windows from the bounds union. Capture APIs drop them from the composite while including them in the union dragged its geometry across the gap between displays, the widths stopped matching, and the whole batch was discarded. The windows that surfaced this were Control Center-hosted slots orphaned by an earlier Thaw process: Control Center owns them, so they outlive restarts, and their bundle-ID names keep them out of `ControlItemPair`'s strip list (#962).
+
+---
+
+### Dependencies & docs
+
+- Sparkle bumped in the swift group (#971); github-actions group bumped with four updates (#972).
+- README OpenSSF badges switched to live shieldcn scorecard/openssf endpoints (#920); contributor image source updated; repository notice added.
+- FUNDING.yml gained Ko-fi and PayPal entries.
+
+---
+
+### Upgrade notes
+
+1. **From 2.0.0-rc.4:** in-place Sparkle update.
+2. **Move budgets:** defaults rose to 250 ms (350 for Bento Boxes); an explicit `defaults write` override still takes precedence over either.
+
 ## [2.0.0-rc.4]
 
 Please report issues at
