@@ -48,8 +48,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "（スクリプト未洗濯）"
           }
         },
         "ko" : {
@@ -96,8 +96,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(скрипт не вибрано)"
           }
         },
         "vi" : {
@@ -127,6 +127,42 @@
             "state" : "new",
             "value" : "%1$@ %2$@ %3$@"
           }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@%2$@%3$@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
         }
       }
     },
@@ -135,6 +171,36 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "%1$@ %2$@ pt"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ bodů"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@%2$@ Punkt"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ punto"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ pt"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "%1$@ %2$@ pt"
           }
         }
@@ -379,10 +445,86 @@
       }
     },
     "%@ Bar off" : {
-      "comment" : "Profile preview summary fragment: the Thaw Bar is disabled. %@ is the app name."
+      "comment" : "Profile preview summary fragment: the Thaw Bar is disabled. %@ is the app name.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lišta %@ vypnutá"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Leiste an"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Sáv kikapcsolva"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Çubuğu kapalı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭 %@ 栏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉 %@ 列"
+          }
+        }
+      }
     },
     "%@ Bar on" : {
-      "comment" : "Profile preview summary fragment: the Thaw Bar is enabled. %@ is the app name."
+      "comment" : "Profile preview summary fragment: the Thaw Bar is enabled. %@ is the app name.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lišta %@ zapnutá"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Leiste aus"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Sáv bekapcsolva"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Çubuğu açık"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 %@ 栏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 %@ 列"
+          }
+        }
+      }
     },
     "%@ can work in a limited mode without Screen Recording." : {
       "localizations" : {
@@ -412,8 +554,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ can work in a limited mode without Screen Recording."
+            "state" : "translated",
+            "value" : "%@ korlátozott módban is működhet képernyőfelvétel nélkül."
           }
         },
         "id" : {
@@ -430,8 +572,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ can work in a limited mode without Screen Recording."
+            "state" : "translated",
+            "value" : "%@ は画面収録なしでも制限モードで動作できます。"
           }
         },
         "ko" : {
@@ -472,8 +614,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ can work in a limited mode without Screen Recording."
+            "state" : "translated",
+            "value" : "%@ Ekran Kaydı izni olmadan limitli olarak çalışabilir."
           }
         },
         "uk" : {
@@ -629,11 +771,66 @@
             "state" : "new",
             "value" : "%1$@ can't currently tell which app owns \"%2$@\", so moving it is disabled. This usually resolves on its own; relaunching the app that owns the item can help."
           }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ nemůže určit, ke které aplikaci patří ikona \"%2$@\", takže její přesouvání je vypnuté. Tento problém se obvykle vyřeší sám, pomoci může také restartování dané aplikace."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ pillanatnyilag nem tudja megállapítani melyik alkalmazás birtokolja ezt: \"%2$@\", ezért a mozgatás nem engedélyezett. Ez általában magától megoldódik. Az alkalmazás birtokosának újraindítása segíthet."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ şu anda \"%2$@\" ögesinin hangi uygulamaya ait olduğunu belirleyemiyor, bu nedenle ögeyi taşımak devre dışı bırakıldı. Bu durum genellikle kendiliğinden çözülür; ögenin ait olduğu uygulamayı yeniden başlatmak işe yarayabilir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 目前不能告知哪个应用拥有 \"%2$@\"，所以禁止移动此项目。 这通常会自行解决。重启拥有此项目的应用可能有帮助。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 目前無法確定哪個應用程式擁有「%2$@」，因此移動該項目的功能已被停用。此問題通常會自行解決；重新啟動擁有該項目的應用程式或許可以解決問題。"
+          }
         }
       }
     },
     "%@ can't locate its hidden-section divider right now. It is attempting recovery in the background — try again in a few seconds." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nemůže najít oddělovač skryté sekce a pokouší se problém vyřešit na pozadí — zkuste akci znovu za pár vteřin."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ şu anda gizli bölüm ayırıcısını bulamıyor. Arka planda kurtarma işlemi gerçekleştiriliyor — birkaç saniye sonra tekrar deneyin."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 现在无法定位其隐藏区域分隔符。它正在后台尝试恢复 - 几秒钟后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 目前無法找到其隱藏區分隔符號。它正在後台嘗試恢復——請稍後再試。"
+          }
+        }
+      }
     },
     "%@ cannot arrange menu bar items in automatically hidden menu bars." : {
       "comment" : "A view that shows a message when the menu bar layout can't be arranged in automatically hidden menu bars.",
@@ -1477,7 +1674,44 @@
       }
     },
     "%@ seconds" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vteřin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Sekunden"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ másodperc"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ saniye"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 秒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 秒"
+          }
+        }
+      }
     },
     "%@ Settings…" : {
       "comment" : "The title of the menu item that opens the settings window.",
@@ -2462,7 +2696,44 @@
       }
     },
     "+%lld" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+ %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        }
+      }
     },
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
@@ -3061,7 +3332,44 @@
       }
     },
     "Active display: %@" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivní obrazovka: %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiver Bildschirm: %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktív kijelző: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif ekran: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动显示器：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活動顯示器：%@"
+          }
+        }
+      }
     },
     "Active profile" : {
       "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled.",
@@ -3092,8 +3400,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Active profile"
+            "state" : "translated",
+            "value" : "Aktív profil"
           }
         },
         "id" : {
@@ -3110,8 +3418,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Active profile"
+            "state" : "translated",
+            "value" : "アクティブなプロファイル"
           }
         },
         "ko" : {
@@ -3515,8 +3823,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "Додайте пункт «Вийти з %@» у нижню частину додаткового контекстного меню."
           }
         },
         "vi" : {
@@ -3540,7 +3848,44 @@
       }
     },
     "Add Application" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat aplikaci"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anwendung hinzufügen"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alkalmazás hozzáadása"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulama Ekle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "增加應用程式"
+          }
+        }
+      }
     },
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
@@ -3782,10 +4127,78 @@
       }
     },
     "Advanced layout controls" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokročilá ovládání rozložení"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erweiterte Darstellungs-Einstellungen"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haladó elrendezés-beállítások"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelişmiş düzen kontrolleri"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级布局控制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高級佈局控制"
+          }
+        }
+      }
     },
     "After revealing" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po odhalení"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Felfedés után"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gösterildikten sonra"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示之后"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示之後"
+          }
+        }
+      }
     },
     "All profiles" : {
       "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled.",
@@ -3816,8 +4229,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "All profiles"
+            "state" : "translated",
+            "value" : "Összes profil"
           }
         },
         "id" : {
@@ -3834,8 +4247,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "All profiles"
+            "state" : "translated",
+            "value" : "すべてのプロファイル"
           }
         },
         "ko" : {
@@ -4298,8 +4711,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+            "state" : "translated",
+            "value" : "Majdnem kész! %@ számára az alábbi engedély szükséges hogy a menüsávot kezelhesse."
           }
         },
         "id" : {
@@ -4358,14 +4771,14 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+            "state" : "translated",
+            "value" : "Neredeyse tamam! %@ uygulamasının menü çubuğunuzu yönetebilmesi için aşağıdaki izinlere ihtiyacı var."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+            "state" : "translated",
+            "value" : "Уже майже готово! %@ потребує наведених нижче дозволів для управління вашою панеллю меню."
           }
         },
         "vi" : {
@@ -4392,7 +4805,122 @@
       "comment" : "A segment in the update channel picker that displays \"Alpha\"."
     },
     "Always Hidden" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trvale skryté"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindig rejtett"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Her Zaman Gizli"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久隐藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一律隱藏"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer-Versteckt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siempre oculto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Caché"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selalu-Tersembunyi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sempre nascosto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "항상 숨김"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Altijd verborgen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze ukryte"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sempre Ocultos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда скрытые"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ซ่อนอยู่เสมอ"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди приховані"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luôn ẩn"
+          }
+        }
+      }
     },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
@@ -4661,8 +5189,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "A rejtett menüsávelemek mindig jelenjenek meg a menüsávban."
           }
         },
         "id" : {
@@ -4679,8 +5207,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "メニューバーに非表示のメニューバー項目を常に表示します。"
           }
         },
         "ko" : {
@@ -4727,8 +5255,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "Завжди показувати приховані елементи меню в рядку меню."
           }
         },
         "vi" : {
@@ -4994,7 +5522,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Pouze trvale skryté položky"
           }
         },
@@ -5018,8 +5546,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Csak a mindig rejtett elemek"
+            "state" : "translated",
+            "value" : "Csak mindig rejtett elemek"
           }
         },
         "id" : {
@@ -5078,8 +5606,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Yalnızca her zaman gizli öğeler"
+            "state" : "translated",
+            "value" : "Yalnızca her zaman gizli ögeleri"
           }
         },
         "uk" : {
@@ -5096,14 +5624,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "仅永久隐藏的项目"
+            "state" : "translated",
+            "value" : "仅永久隐藏项目"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "僅一律隱藏的項目"
+            "state" : "translated",
+            "value" : "僅「一律隱藏」項目"
           }
         }
       }
@@ -5560,8 +6088,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Застосування швидко перезапускає програми з елементами меню, щоб вони застосували нові інтервали. Налаштування застосовуються, якщо цей дисплей має активний рядок меню."
           }
         },
         "vi" : {
@@ -5732,8 +6260,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Alkalmazza a globális beállításokat az összes kijelzőre?"
           }
         },
         "id" : {
@@ -5750,8 +6278,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "すべてのディスプレイにグローバル設定を適用しますか？"
           }
         },
         "ko" : {
@@ -5798,8 +6326,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Застосувати глобальні налаштування до всіх екранів?"
           }
         },
         "vi" : {
@@ -5851,8 +6379,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
+            "state" : "translated",
+            "value" : "Alkalmazza a menüsávtérköz módosítását?"
           }
         },
         "id" : {
@@ -5869,8 +6397,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
+            "state" : "translated",
+            "value" : "メニューバーの間隔変更を適用しますか？"
           }
         },
         "ko" : {
@@ -5917,8 +6445,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
+            "state" : "translated",
+            "value" : "Застосувати зміни інтервалів рядка меню?"
           }
         },
         "vi" : {
@@ -5970,8 +6498,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Alkalmazza a térköz-változást?"
           }
         },
         "id" : {
@@ -5988,8 +6516,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "間隔変更を適用しますか？"
           }
         },
         "ko" : {
@@ -6036,8 +6564,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Застосувати зміни інтервалів?"
           }
         },
         "vi" : {
@@ -6089,8 +6617,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "A fenti globális sablon alkalmazása az összes csatlakoztatott és korábban látott kijelzőre. Az újonnan csatlakoztatott kijelzők is ebből a sablonból lesznek bevetve."
           }
         },
         "id" : {
@@ -6155,8 +6683,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Застосувати наведений вище глобальний шаблон до кожного підключеного та раніше виявленого дисплея. Нові підключені дисплеї також налаштовуються на основі цього шаблону."
           }
         },
         "vi" : {
@@ -6327,8 +6855,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Alkalmazza az összes kijelzőre"
           }
         },
         "id" : {
@@ -6345,8 +6873,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "すべてのディスプレイに適用"
           }
         },
         "ko" : {
@@ -6446,8 +6974,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "Az „Alkalmazás” rövid időre újraindítja a menüsávelemekkel rendelkező alkalmazásokat, hogy átvegyék az új térközt."
           }
         },
         "id" : {
@@ -6685,7 +7213,7 @@
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "value" : "Ennek a térközváltozásnak az alkalmazása miden menüsávelemmel rendelkező alkalmazást újra fog indítani. Az alkalmazások újraindítása a nem mentett bemeneti adatok, a folyamatban lévő állapot vagy az átmeneti alkalmazásállapot elvesztését okozhatja. Mentse el az új térközt ehhez a profilhoz: \"%@\", vagy az összes profilhoz."
           }
         },
         "id" : {
@@ -6885,13 +7413,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld app"
+                  "value" : "%lld alkalmazás"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld apps"
+                  "value" : "%lld alkalmazások"
                 }
               }
             }
@@ -7146,7 +7674,38 @@
       }
     },
     "Apps may relaunch" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Může dojít k restartu aplikací"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az alkalmazások újraindulhatnak"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulamalar yeniden başlayabilir"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用可能会重启"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "應用程式可能重啟"
+          }
+        }
+      }
     },
     "Apps that request settings access will appear here after you approve them." : {
       "comment" : "A description of the whitelisted apps section.",
@@ -7506,7 +8065,32 @@
       }
     },
     "Arrangement" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uspořádání"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düzenleme"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排列方向"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排序"
+          }
+        }
+      }
     },
     "Arrow" : {
       "comment" : "Localized string key for each case in the `Name` enum.",
@@ -7747,10 +8331,62 @@
       }
     },
     "Auto-rehide off" : {
-      "comment" : "Profile preview summary fragment: automatic rehiding is disabled in the profile."
+      "comment" : "Profile preview summary fragment: automatic rehiding is disabled in the profile.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatické opětovné skrytí zakázáno"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik yeniden gizleme kapalı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭自动重新隐藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉自動重新隱藏"
+          }
+        }
+      }
     },
     "Auto-rehide on" : {
-      "comment" : "Profile preview summary fragment: automatic rehiding is enabled in the profile."
+      "comment" : "Profile preview summary fragment: automatic rehiding is enabled in the profile.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatické opětovné skrytí povoleno"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik yeniden gizleme açık"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开自动重新隐藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟自動重新隱藏"
+          }
+        }
+      }
     },
     "Auto-Switch" : {
       "comment" : "Section header for the \"Auto-Switch\" settings in the profile settings pane.",
@@ -8971,8 +9607,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+            "state" : "translated",
+            "value" : "A Thaw megerősítést kér mielőtt egy képernyő-módosítás vagy térközszerkesztés újraindítja a menüsávelemekkel rendelkező alkalmazásokat. Kapcsold ezt ki a térközváltozások alkalmazásához és az alkalmazások újraindításához megerősítés nélkül."
           }
         },
         "id" : {
@@ -9037,8 +9673,8 @@
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+            "state" : "translated",
+            "value" : "Перш ніж зміна вигляду або редагування інтервалів призведе до перезапуску програм у панелі меню, Thaw запропонує вам підтвердити ці дії. Вимкніть цю опцію, щоб зміни інтервалів застосовувалися та програми перезапускалися без підтвердження."
           }
         },
         "vi" : {
@@ -9181,7 +9817,123 @@
       }
     },
     "Beta" : {
-      "comment" : "A segment in the update channel picker that displays \"Beta\"."
+      "comment" : "A segment in the update channel picker that displays \"Beta\".",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BÉTA"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ベータ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "베타"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "БЕТА"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "БЕТА"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试版"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測試版"
+          }
+        }
+      }
     },
     "Border" : {
       "comment" : "A toggle that lets the user enable or disable the border around the view.",
@@ -9587,8 +10339,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Broadcast"
+            "state" : "translated",
+            "value" : "一括適用"
           }
         },
         "ko" : {
@@ -10256,7 +11008,32 @@
       }
     },
     "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Změna rozestupů řádku nabídek na konkrétní obrazovce může vyvolat restart aplikací, které mají v řádku ikony. Může dojít ke ztrátě jejich neuložených vstupů, postupu nebo dočasného stavu."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir ekran için menü çubuğu aralığını değiştirmek, uygulamaları menü çubuğu ögeleriyle yeniden başlatabilir. Kaydedilmemiş ayarlar, ilerleme durumu veya geçici uygulama tercihleri kaybolabilir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改菜单栏项目间距可能导致相关项目的应用重启。未保存的输入，进度，或应用状态可能丢失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改一個顯示器的選單列項目間距可能導致相關項目的應用程式重新啟動。未儲存的輸入，進度，或程式狀態可能遺失。"
+          }
+        }
+      }
     },
     "Check Automatically" : {
       "comment" : "A button that enables automatic update checking.",
@@ -11614,8 +12391,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "スクリプトを選択…"
           }
         },
         "ko" : {
@@ -11687,7 +12464,32 @@
       }
     },
     "Choose where to move the menu bar items:" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte, kam přesunout položky řádku nabídek:"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerinin nereye taşınacağını seçin:"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择把菜单栏项目移动到何处："
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇將選單列項目移至何處："
+          }
+        }
+      }
     },
     "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results." : {
       "comment" : "Description for the Search section in the Advanced settings pane that controls which menu bar sections appear in the menu bar search panel and in what order.",
@@ -11974,8 +12776,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "フックを解除"
           }
         },
         "ko" : {
@@ -12047,7 +12849,32 @@
       }
     },
     "Clear search" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vymazat vyhledávání"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aramayı temizle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空搜索内容"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除搜尋"
+          }
+        }
+      }
     },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
@@ -12375,8 +13202,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+            "state" : "translated",
+            "value" : "Arama çubuğunu kullanırken olduğu gibi, sizin adınıza menü çubuğu ögelerine tıklayın."
           }
         },
         "uk" : {
@@ -12672,8 +13499,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
+            "state" : "translated",
+            "value" : "Megerősítés kérése az alkalmazások újraindítása előtt"
           }
         },
         "id" : {
@@ -12690,8 +13517,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
+            "state" : "translated",
+            "value" : "アプリを再起動する前に確認する"
           }
         },
         "ko" : {
@@ -12732,14 +13559,14 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
+            "state" : "translated",
+            "value" : "Uygulamaları yeniden başlatmadan önce onayla"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
+            "state" : "translated",
+            "value" : "Підтвердити перед перезапуском програм"
           }
         },
         "vi" : {
@@ -13358,7 +14185,32 @@
       }
     },
     "Copied" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zkopírováno"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopyalandı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已複製"
+          }
+        }
+      }
     },
     "Copy" : {
       "comment" : "Suffix to be appended to a profile name to indicate that it is a copy of another profile.",
@@ -13602,13 +14454,88 @@
 
     },
     "Couldn't move %@ to the always-hidden section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nebylo možné přesunout %@ do sekce trvale skryté."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ her zaman gizli olan bölüme taşınamadı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法移动 %@ 到永久隐藏区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法移動 %@ 至一律隱藏區段。"
+          }
+        }
+      }
     },
     "Couldn't move %@ to the hidden section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nebylo možné přesunout %@ do sekce skryté."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gizli bölüme taşınamadı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法移动 %@ 到隐藏区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法移動 %@ 至隱藏區段。"
+          }
+        }
+      }
     },
     "Couldn't move the item right now." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nebylo možné přesunout položku."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öge şu anda taşınamadı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在无法移动这个项目。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在無法移動該項目。"
+          }
+        }
+      }
     },
     "Created: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was created.",
@@ -14650,8 +15577,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+            "state" : "translated",
+            "value" : "Mac bilgisayarınızda menü çubuğu ögelerini ve nerede konumlandıklarını tespit edin."
           }
         },
         "uk" : {
@@ -15543,8 +16470,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don't ask again"
+            "state" : "translated",
+            "value" : "Ne kérdezze meg többet"
           }
         },
         "id" : {
@@ -15561,8 +16488,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don't ask again"
+            "state" : "translated",
+            "value" : "次回から表示しない"
           }
         },
         "ko" : {
@@ -17539,7 +18466,32 @@
       }
     },
     "Empty menu bar area" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prázdné místo na řádku nabídek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boş menü çubuğu alanı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空菜单栏区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除選單列區域"
+          }
+        }
+      }
     },
     "Enable diagnostic logging" : {
       "comment" : "A toggle that enables or disables diagnostic logging.",
@@ -17826,8 +18778,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Permissions"
+            "state" : "translated",
+            "value" : "権限を有効にする"
           }
         },
         "ko" : {
@@ -17868,8 +18820,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Permissions"
+            "state" : "translated",
+            "value" : "İzinleri Etkinleştir"
           }
         },
         "uk" : {
@@ -18494,7 +19446,32 @@
       }
     },
     "Enable the always-hidden section in Layout to configure icon gestures for that section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V části Rozložení zapněte sekci „Trvale skryté“, abyste mohli nakonfigurovat gesta pro tuto sekci."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düzen bölümünde her zaman gizli bölümü etkinleştirerek bu bölüm için simge hareketlerini yapılandırabilirsiniz."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用“布局”中的永久隐藏区域，以配置这个区域的图标手势。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用佈局中的一律隱藏區段，以設定該區域的圖示手勢。"
+          }
+        }
+      }
     },
     "Enabled" : {
       "comment" : "A checkbox that enables or disables a hook.",
@@ -18543,8 +19520,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "有効"
           }
         },
         "ko" : {
@@ -19330,7 +20307,32 @@
       }
     },
     "External apps cannot read or modify %@ settings." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Externí aplikace nemohou číst ani měnit nastavení %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Harici uygulamalar %@ ayarlarını okuyamaz veya değiştiremez."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部应用无法读写 %@ 的设置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部應用程式無法讀取或修改 %@ 的設定。"
+          }
+        }
+      }
     },
     "Failed to encode profiles for export." : {
       "comment" : "A message displayed when the user fails to export all profiles.",
@@ -19572,7 +20574,32 @@
       }
     },
     "Failed to update configuration on ^[%lld profiles](inflect: true)." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nezdařila se aktualizace konfigurace při ^[%lld profiles](inflect: true)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "^[%lld profilde](inflect: true) yapılandırma güncellenemedi."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 %lld 个配置文件失败。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法更新 %lld 個設定檔的配置。"
+          }
+        }
+      }
     },
     "File does not exist." : {
       "comment" : "Error message when the file specified in the hook does not exist.",
@@ -19621,8 +20648,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "ファイルが存在しません。"
           }
         },
         "ko" : {
@@ -19781,8 +20808,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Find menu bar items visually when searching."
+            "state" : "translated",
+            "value" : "Arama yaparken menü çubuğu ögelerini görsel olarak bulun."
           }
         },
         "uk" : {
@@ -19931,7 +20958,38 @@
       }
     },
     "Focus Filters" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtr pro soustředění"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusfilter"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odak Filtreleri"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "专注模式过滤器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專注模式過濾器"
+          }
+        }
+      }
     },
     "Forward" : {
       "comment" : "A button that navigates to the next settings pane.",
@@ -20140,8 +21198,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Found existing settings. Icon positions can't be restored."
+            "state" : "translated",
+            "value" : "Mevcut ayarlar bulundu. Simge konumları geri yüklenemiyor."
           }
         },
         "uk" : {
@@ -20575,8 +21633,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Get Started"
+            "state" : "translated",
+            "value" : "さっそく始める"
           }
         },
         "ko" : {
@@ -20617,8 +21675,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Get Started"
+            "state" : "translated",
+            "value" : "Başlayın"
           }
         },
         "uk" : {
@@ -20932,8 +21990,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global"
+            "state" : "translated",
+            "value" : "グローバル"
           }
         },
         "ko" : {
@@ -21005,7 +22063,32 @@
       }
     },
     "Global %@ pt" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Globální %@ bodů"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genel %@ punto"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全局 %@ pt"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全域 %@ pt"
+          }
+        }
+      }
     },
     "Global Hooks" : {
       "comment" : "A heading for the global hooks section.",
@@ -21054,8 +22137,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "グローバルフック"
           }
         },
         "ko" : {
@@ -22079,7 +23162,32 @@
       }
     },
     "Hide menu bar items" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skrýt ikony řádku nabídek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerini gizle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏菜单栏项目"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隱藏選單列項目"
+          }
+        }
+      }
     },
     "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
       "comment" : "Description of the menu bar management onboarding slide.",
@@ -22170,8 +23278,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerini isteğe bağlı olarak gizleyin veya gösterin. Ögeleri bölümler arasında sürükleyin, favorilerinizi her zaman görünür tutun ve geri kalanını her zaman gizli olan bölüme saklayın."
           }
         },
         "uk" : {
@@ -22367,8 +23475,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "フック"
           }
         },
         "ko" : {
@@ -22843,8 +23951,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hotkeys & Automation"
+            "state" : "translated",
+            "value" : "ホットキー・自動化"
           }
         },
         "ko" : {
@@ -22885,8 +23993,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hotkeys & Automation"
+            "state" : "translated",
+            "value" : "Kısayollar ve Otomasyon"
           }
         },
         "uk" : {
@@ -23512,7 +24620,32 @@
       }
     },
     "Icon previews" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Náhledy ikon"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öge ön izlemesi"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图标预览"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖示預覽"
+          }
+        }
+      }
     },
     "Icon refresh rate" : {
       "comment" : "A label displayed above a slider that controls how often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.",
@@ -24281,8 +25414,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import from Ice"
+            "state" : "translated",
+            "value" : "Iceからインポート"
           }
         },
         "ko" : {
@@ -24323,8 +25456,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import from Ice"
+            "state" : "translated",
+            "value" : "Ice kullanarak aktar"
           }
         },
         "uk" : {
@@ -24830,16 +25963,116 @@
       }
     },
     "Include always-hidden section in search" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prohledávat sekci Vždy skryté"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Her zaman gizli olan bölümü aramaya dahil et"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜索中包含永久隐藏区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜尋中包含一律隱藏區段"
+          }
+        }
+      }
     },
     "Include hidden section in search" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prohledávat skryté položky"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Her zaman gizli olan bölümü aramaya dahil et"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜索中包含隐藏区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜尋中包含隱藏區段"
+          }
+        }
+      }
     },
     "Include visible section in search" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prohledávat zobrazené položky"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görünür bölümü aramaya dahil et"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜索中包含可见区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在搜尋中包含顯示區段"
+          }
+        }
+      }
     },
     "Inset on notched displays" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vložka na displejích s výřezem"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çentikli ekranlarda içe kaydır"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在刘海屏上避让刘海"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在瀏海螢幕上避讓瀏海"
+          }
+        }
+      }
     },
     "Items are arranged in a grid with multiple columns." : {
       "comment" : "A description of the grid layout.",
@@ -25318,7 +26551,32 @@
       }
     },
     "Items were moved to the Visible section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Položky přesunuty mezi viditelné."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ögeler görünür bölüme taşındı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目被移动到了可见区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目被移到了「顯示」區段。"
+          }
+        }
+      }
     },
     "Keep search" : {
       "comment" : "A toggle to keep a search query open.",
@@ -25797,7 +27055,32 @@
       }
     },
     "Layout reset. Items were moved to the Always Hidden section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozložení obnoveno. Položky byly přesunuty do skryté sekce."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düzen sıfırlandı. Ögeler Gizli bölümüne taşındı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "布局已重置。项目被移动到了永久隐藏区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "佈局已重置。項目已移至「一律隱藏」區段。"
+          }
+        }
+      }
     },
     "Layout reset. Items were moved to the Hidden section." : {
       "comment" : "A message displayed after successfully resetting the menu bar layout.",
@@ -26755,7 +28038,32 @@
 
     },
     "macOS draws a solid menu bar while Reduce Transparency is on, so %@ cannot tint or reshape it. Turn the setting off to see these effects." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systém macOS při zapnuté funkci „Snížit průhlednost“ vykresluje lištu nabídek jako plnou, takže ji %@ nemůže zabarvit ani změnit její tvar. Chcete-li tyto efekty vidět, vypněte toto nastavení."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saydamlığı Azalt açıkken macOS düz/opak bir menü çubuğu çizer, bu nedenle %@ bunu renklendiremez veya yeniden şekillendiremez. Bu efektleri görmek için ayarı kapatın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当“降低透明度”打开时，macOS 会绘制一个不透明的菜单栏，因此 %@ 无法对其进行着色或更改形状。关闭该设置即可查看这些效果。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用「減少透明度」後，macOS 會繪製一個不透明的選單列，因此 %@ 無法對其進行著色或變更形狀。關閉此設定即可查看這些效果。"
+          }
+        }
+      }
     },
     "macOS prohibits \"%@\" from being moved." : {
       "comment" : "The text that appears below the main message text in the alert displayed when a menu bar item is not movable.",
@@ -27115,7 +28423,32 @@
       }
     },
     "Maximum number of items per row in the grid arrangement." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejvyšší počet položek v řádku mřížky."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izgara düzeninde satır başına maksimum öge sayısı."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网格排列中每行的最大条目数。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "網格排列中每列項目的最大數量。"
+          }
+        }
+      }
     },
     "Maximum number of items per row in the grid layout." : {
       "comment" : "Label for the maximum number of items per row in the grid layout.",
@@ -27242,13 +28575,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Řádek nabídek"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Menüleiste"
           }
         },
@@ -27326,7 +28659,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Menü Çubuğu"
           }
         },
@@ -27344,14 +28677,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "菜单栏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "選單列"
+            "state" : "translated",
+            "value" : "選單條"
           }
         }
       }
@@ -27476,10 +28809,66 @@
       }
     },
     "Menu bar behavior" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chování řádku nabídek"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menüleisten-Verhalten"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü Çubuğu davranışı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "菜单栏行为"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選單條行為"
+          }
+        }
+      }
     },
     "Menu bar effects are hidden by Reduce Transparency" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Funkce „Snížit průhlednost“ skryla efekty v liště nabídek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü çubuğu efektleri Saydamlığı Azalt tarafından gizleniyor"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "菜单栏效果被“降低透明度”隐藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選單列效果被「減少透明度」隱藏"
+          }
+        }
+      }
     },
     "Menu bar item is not movable." : {
       "comment" : "Message text in an alert that appears when a menu bar item is not movable.",
@@ -28361,8 +29750,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Management"
+            "state" : "translated",
+            "value" : "メニューバー管理"
           }
         },
         "ko" : {
@@ -28403,8 +29792,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Management"
+            "state" : "translated",
+            "value" : "Menü Çubuğu Yönetimi"
           }
         },
         "uk" : {
@@ -28672,7 +30061,38 @@
       }
     },
     "Menu Bar Search" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyhledávání v řádku nabídek"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menüleisten-Suche"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü Çubuğu Arama"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索菜单栏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選單列搜尋"
+          }
+        }
+      }
     },
     "Menu Bar Sections" : {
       "comment" : "Section header for advanced settings related to menu bar sections.",
@@ -29032,13 +30452,106 @@
       }
     },
     "More" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Více"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha fazla"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多"
+          }
+        }
+      }
     },
     "More profile actions" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Více akcí profilu"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr Profilaktionen"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha fazla profil seçeneği"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多配置操作"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多設定檔操作"
+          }
+        }
+      }
     },
     "More project links" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Více odkazů na projekty"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr Projektlinks"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha fazla proje bağlantısı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多项目链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多項目連結"
+          }
+        }
+      }
     },
     "Mouse pointer" : {
       "comment" : "Localized string key for the \"Mouse pointer\" option in the Ice Bar location picker.",
@@ -29206,8 +30719,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "下げる"
           }
         },
         "ko" : {
@@ -29279,7 +30792,32 @@
       }
     },
     "Move items that don't fit into Hidden" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přesouvat položky, které se nevejdou, mezi skryté"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sığmayan ögeleri Gizli bölüme taşı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将放不下的项目移入“隐藏”区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將容納不下的項目移至「隱藏」區域"
+          }
+        }
+      }
     },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
@@ -29446,8 +30984,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items to rearrange or hide them."
+            "state" : "translated",
+            "value" : "メニューバー項目が移動して整理・非表示にします。"
           }
         },
         "ko" : {
@@ -29488,8 +31026,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items to rearrange or hide them."
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerini yeniden düzenlemek veya gizlemek için taşıyın."
           }
         },
         "uk" : {
@@ -29642,8 +31180,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Přesunout ukazatel na zobrazené ikony"
+            "state" : "translated",
+            "value" : "Přesunout ukazatel na odhalené položky"
           }
         },
         "de" : {
@@ -29726,8 +31264,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "İmleci gösterilen ögeye taşı"
+            "state" : "translated",
+            "value" : "İmleci açığa çıkarılan ögelerin üzerine getirin"
           }
         },
         "uk" : {
@@ -29744,14 +31282,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "将指针移动到显示的项目"
+            "state" : "translated",
+            "value" : "移动指针到已显示的项目"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "將游標移至顯示的項目"
+            "state" : "translated",
+            "value" : "將游標移到已顯示的項目上"
           }
         }
       }
@@ -29803,8 +31341,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "上げる"
           }
         },
         "ko" : {
@@ -30398,8 +31936,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No menu bar items available"
+            "state" : "translated",
+            "value" : "メニューバー項目がありません"
           }
         },
         "ko" : {
@@ -30440,8 +31978,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No menu bar items available"
+            "state" : "translated",
+            "value" : "Menü çubuğu ögesi yok"
           }
         },
         "uk" : {
@@ -30636,8 +32174,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "まだプロファイルは保存されていません。プロファイルごとのフックを設定するには、「プロファイル」タブでプロファイルを作成してください。"
           }
         },
         "ko" : {
@@ -30828,7 +32366,32 @@
       }
     },
     "No settings found" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenalezena žádná nastavení"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayar bulunamadı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有找到設定"
+          }
+        }
+      }
     },
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
@@ -31311,8 +32874,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Není k dispozici, protože všechny sekce se již otevírají v liště %@."
+            "state" : "translated",
+            "value" : "Nedostupné, protože se všechny sekce již otevírají v liště %@."
           }
         },
         "de" : {
@@ -31395,8 +32958,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tüm bölümler zaten %@ Çubuğu'nda açıldığı için kullanılamıyor."
+            "state" : "translated",
+            "value" : "Her bölüm zaten %@ Çubuğunda açıldığından kullanılamıyor."
           }
         },
         "uk" : {
@@ -31413,14 +32976,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "由于所有分区已在 %@ 栏中打开，因此该功能不可用。"
+            "state" : "translated",
+            "value" : "不可用，因为所有区域都已在 %@ 栏打开。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "所有區段已在 %@ 選單列中開啟，此選項不可用。"
+            "state" : "translated",
+            "value" : "由於每個區段都已在 %@ 列中打開，因此不可用。"
           }
         }
       }
@@ -31591,8 +33154,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "グローバルテンプレートで %@ バーが有効なため、使用できません。"
           }
         },
         "ko" : {
@@ -31829,8 +33392,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "実行できません。ファイルに「chmod +x」を実行してください。"
           }
         },
         "ko" : {
@@ -32430,8 +33993,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click again to hide"
+            "state" : "translated",
+            "value" : "もう一度クリックすると非表示になります"
           }
         },
         "ko" : {
@@ -32472,8 +34035,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click again to hide"
+            "state" : "translated",
+            "value" : "Gizlemek için tekrar tıklayın"
           }
         },
         "uk" : {
@@ -32555,8 +34118,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click divider to reveal"
+            "state" : "translated",
+            "value" : "区切りをクリックすると表示されます"
           }
         },
         "ko" : {
@@ -32597,8 +34160,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click divider to reveal"
+            "state" : "translated",
+            "value" : "Göstermek için ayırıcıya tıklayın"
           }
         },
         "uk" : {
@@ -32680,8 +34243,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal"
+            "state" : "translated",
+            "value" : "パーソナル"
           }
         },
         "ko" : {
@@ -32722,8 +34285,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Personal"
+            "state" : "translated",
+            "value" : "Kişisel"
           }
         },
         "uk" : {
@@ -32805,8 +34368,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Travel"
+            "state" : "translated",
+            "value" : "旅行"
           }
         },
         "ko" : {
@@ -32847,8 +34410,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Travel"
+            "state" : "translated",
+            "value" : "Seyahat"
           }
         },
         "uk" : {
@@ -32930,8 +34493,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Work"
+            "state" : "translated",
+            "value" : "仕事"
           }
         },
         "ko" : {
@@ -32972,8 +34535,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Work"
+            "state" : "translated",
+            "value" : "İş"
           }
         },
         "uk" : {
@@ -33055,8 +34618,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Default"
+            "state" : "translated",
+            "value" : "デフォルト"
           }
         },
         "ko" : {
@@ -33097,8 +34660,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Default"
+            "state" : "translated",
+            "value" : "Varsayılan"
           }
         },
         "uk" : {
@@ -33180,8 +34743,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Gradient"
+            "state" : "translated",
+            "value" : "グラデーション"
           }
         },
         "ko" : {
@@ -33222,8 +34785,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Gradient"
+            "state" : "translated",
+            "value" : "Gradyan"
           }
         },
         "uk" : {
@@ -33305,8 +34868,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rounded"
+            "state" : "translated",
+            "value" : "角丸"
           }
         },
         "ko" : {
@@ -33347,8 +34910,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rounded"
+            "state" : "translated",
+            "value" : "Yuvarlatılmış"
           }
         },
         "uk" : {
@@ -33900,8 +35463,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open menu bar items"
+            "state" : "translated",
+            "value" : "メニューバー項目を開く"
           }
         },
         "ko" : {
@@ -33942,8 +35505,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open menu bar items"
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerini aç"
           }
         },
         "uk" : {
@@ -33973,7 +35536,32 @@
       }
     },
     "Open Settings" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít nastavení"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarları Aç"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開設定"
+          }
+        }
+      }
     },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
@@ -34146,8 +35734,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Page %1$lld of %2$lld"
+            "state" : "translated",
+            "value" : "%2$lldページ中 %1$lldページ"
           }
         },
         "ko" : {
@@ -34188,8 +35776,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Page %1$lld of %2$lld"
+            "state" : "translated",
+            "value" : "Sayfa (%1$lld / %2$lld)"
           }
         },
         "uk" : {
@@ -34307,8 +35895,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+            "state" : "translated",
+            "value" : "Menü çubuğunuzu dilediğiniz gibi renklendirin. Düz renkler, gradyanlar ve özel şekiller seçin; ardından kusursuz bir görünüm için gölgeler ve kenarlıklar ekleyin."
           }
         },
         "uk" : {
@@ -34384,8 +35972,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "プロフィールごとのフック"
           }
         },
         "ko" : {
@@ -34741,8 +36329,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "適用後"
           }
         },
         "ko" : {
@@ -34860,8 +36448,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "適用前"
           }
         },
         "ko" : {
@@ -34933,10 +36521,61 @@
       }
     },
     "Press ⌃ Space" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stiskněte ⌃ Mezerník"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌃ Boşluk tuşuna basın"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按下 control (⌃) + 空格"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按下 control (^) + 空格"
+          }
+        }
+      }
     },
     "Preview this profile's saved layout and settings" : {
-      "comment" : "Help tooltip on the profile preview button."
+      "comment" : "Help tooltip on the profile preview button.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Náhled rozložení a nastavení uložených v tomto profilu"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu profilin kayıtlı düzen ve ayarlarını ön izle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览此配置文件的已保存布局和设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "預覽此設定檔的已儲存佈局和設定"
+          }
+        }
+      }
     },
     "Profile" : {
       "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",
@@ -35891,7 +37530,32 @@
       }
     },
     "Rehide interval" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prodleva opětovného skrytí"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeniden gizleme aralığı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新隐藏间隔"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新隱藏間隔"
+          }
+        }
+      }
     },
     "Remove %@ from whitelist" : {
       "comment" : "A label for a button that removes an app from the whitelist. The argument is the name of the app.",
@@ -36965,7 +38629,32 @@
       }
     },
     "Reset Appearance" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovit vzhled"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görünümü Sıfırla"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置外观"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重設外觀"
+          }
+        }
+      }
     },
     "Reset completed with %lld item(s) that could not be moved. Check the menu bar and try again if needed." : {
       "comment" : "A message describing the result of a menu bar layout reset, including the number of items that could not be moved.",
@@ -37326,7 +39015,122 @@
       }
     },
     "Reset Layout…" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnovit rozložení…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düzeni Sıfırla…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置布局……"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重設佈局⋯⋯"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layout zurücksetzen…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restablecer organización…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser la disposition…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elrendezés visszaállítása…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur Ulang Tata Letak…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetta Layout…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レイアウトをリセット…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레이아웃 재설정…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset indeling…"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć układ domyślny…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir Layout…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить расположение…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รีเซ็ตการจัดวางแถบเมนู…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути розмітку…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đặt lại bố cục…"
+          }
+        }
+      }
     },
     "Reset Menu Bar Appearance" : {
       "comment" : "The title of an alert that appears when the user chooses to reset the appearance of the menu bar.",
@@ -37926,7 +39730,32 @@
       }
     },
     "Resets dividers and moves every movable item except the %@ icon to the selected section." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obnoví oddělovače a přesune všechny přesunutelné položky kromě ikony %@ do vybrané sekce."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayırıcıları sıfırlar ve %@ simgesi dışındaki tüm taşınabilir ögeleri seçilen bölüme taşır."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置分隔线，并将除 %@ 图标之外的所有可移动项目移至选中的区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重設分隔線，並將除「%@」圖示以外的所有可移動項目移至所選區段。"
+          }
+        }
+      }
     },
     "Restart %@" : {
       "comment" : "A button that restarts the app.",
@@ -38168,7 +39997,32 @@
       }
     },
     "Reveal hidden items through the Thaw Bar while overflow has items ejected. The visible row has no room left beside the notch at that point, so expanding the hidden section inline cannot show them. Disable to always follow the per-display Thaw Bar setting." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Položky, které byly vyřazeny kvůli přeplnění řádku, najdete v liště Thaw. V řádku nabídek již není vedle výřezu volné místo, takže jejich zobrazení není možné ani rozšířením skryté části přímo v řádku. Tuto funkci deaktivujte, chcete-li vždy dodržovat nastavení lišty Thaw pro daný displej."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taşma nedeniyle ögeler dışarı atıldığında gizli ögeleri Thaw Çubuğu üzerinden gösterin. Görünür satırda çentiğin yanında yer kalmadığı için gizli bölümü satır içinde genişletmek bu ögeleri gösteremez. Ekran başına Thaw Çubuğu ayarını her zaman takip etmek için bunu devre dışı bırakın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当项目溢出时，使用 Thaw Bar 显示被隐藏的项目。此时刘海旁边的可见行已无多余空间，因此无法在行内展开隐藏区域以显示这些项目。停用此项将始终遵循每台显示器的 Thaw Bar 设置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當項目溢出時，使用 Thaw Bar 顯示已隱藏的項目。此時瀏海旁的「顯示」列已無多餘空間，因此無法在列內展開隱藏區段來顯示這些項目。停用此選項將一律遵循每部監視器的 Thaw Bar 設定。"
+          }
+        }
+      }
     },
     "Right aligned" : {
       "comment" : "Localized string key for the right-aligned Thaw Bar location.",
@@ -38931,8 +40785,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "秒"
           }
         },
         "ko" : {
@@ -39091,8 +40945,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+            "state" : "translated",
+            "value" : "Renk tonunu ve görünümünü ayarlamak için menü çubuğundan renk örnekleri alın."
           }
         },
         "uk" : {
@@ -39567,8 +41421,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+            "state" : "translated",
+            "value" : "Mevcut yapılandırmanızı adlandırılmış bir profil olarak kaydedin. Düzenleriniz arasında anında geçiş yapın veya en çok kullandığınız uygulamayı değiştirdiğinizde Thaw uygulamasının otomatik geçiş yapmasına izin verin."
           }
         },
         "uk" : {
@@ -39955,7 +41809,32 @@
       }
     },
     "Script Environment" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriptovací prostředí"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betik Ortamı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本环境"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "腳本環境"
+          }
+        }
+      }
     },
     "Scroll or swipe in the menu bar to show hidden menu bar items." : {
       "comment" : "Label for a toggle that enables or disables showing hidden menu bar items when scrolling or swiping in the menu bar.",
@@ -40123,8 +42002,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "検索"
           }
         },
         "ko" : {
@@ -40553,7 +42432,32 @@
       }
     },
     "Search section ordering" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Řazení v sekci vyhledávání"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arama bölümü sıralaması"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索区域的顺序"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋區段的排序"
+          }
+        }
+      }
     },
     "Section divider style" : {
       "comment" : "Label for a picker that lets the user choose the style of divider to use between menu bar sections.",
@@ -40675,7 +42579,32 @@
       }
     },
     "Sections" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekce"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bölümler"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "區段"
+          }
+        }
+      }
     },
     "Set Menu Bar Profile" : {
       "comment" : "Title and description of the Focus Filter.",
@@ -40797,7 +42726,32 @@
       }
     },
     "Settings URI disabled" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URI nastavení vypnutá"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar URI'si devre dışı bırakıldı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已禁用设置 URI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停用設定 URI"
+          }
+        }
+      }
     },
     "Settings URI is disabled. External apps cannot read or modify %@ settings." : {
       "comment" : "A callout box that describes the security implications of disabling the Settings URI scheme.",
@@ -41039,10 +42993,72 @@
       }
     },
     "Shape" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tvar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Form"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Şekil"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形状"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形狀"
+          }
+        }
+      }
     },
     "Shape fill" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyplnění tvaru"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Form füllen"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Şekil dolgusu"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形状填充"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形狀填充"
+          }
+        }
+      }
     },
     "Shape Kind" : {
       "comment" : "Label for the picker that lets the user select the shape kind for the menu bar.",
@@ -41650,8 +43666,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zobrazovat trvale skryté položky řádku nabídek v liště %@, zatímco skryté položky se nadále rozbalují v řádku nabídek."
+            "state" : "translated",
+            "value" : "Vždy skryté položky zobrazovat v liště %@, zatímco skryté položky se budou odhalovat v řádku nabídek."
           }
         },
         "de" : {
@@ -41734,8 +43750,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Her zaman gizli menü çubuğu ögelerini %@ Çubuğu'nda göster, gizli ögeler menü çubuğunda açılmaya devam etsin."
+            "state" : "translated",
+            "value" : "Gizli ögeler menü çubuğunda genişlemeye devam ederken, her zaman gizli olan menü çubuğu ögelerini %@ Çubuğunda gösterin."
           }
         },
         "uk" : {
@@ -41752,14 +43768,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "在 %@ 栏中显示永久隐藏的菜单栏项目，而隐藏的项目仍在菜单栏中展开。"
+            "state" : "translated",
+            "value" : "在 %@ 栏中显示永久隐藏的菜单栏项目，而隐藏项目在菜单栏中不断增长。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "在 %@ 選單列中顯示一律隱藏的選單列項目，隱藏項目則仍在選單列中展開。"
+            "state" : "translated",
+            "value" : "在 %@ 列中顯示永遠隱藏的選單列項目，而隱藏項目則繼續在選單列中展開。"
           }
         }
       }
@@ -42567,8 +44583,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show live previews of your menu bar items."
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerinizin canlı ön izlemelerini gösterin."
           }
         },
         "uk" : {
@@ -42717,7 +44733,32 @@
       }
     },
     "Show menu bar items" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazit položky řádku nabídek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü çubuğu ögelerini göster"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示菜单栏项目"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示選單列項目"
+          }
+        }
+      }
     },
     "Show on click" : {
       "comment" : "A toggle that enables or disables showing hidden menu bar items when the menu bar is clicked.",
@@ -43600,8 +45641,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Skip"
+            "state" : "translated",
+            "value" : "スキップ"
           }
         },
         "ko" : {
@@ -43642,8 +45683,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Skip"
+            "state" : "translated",
+            "value" : "Atla"
           }
         },
         "uk" : {
@@ -43911,7 +45952,38 @@
       }
     },
     "Spacing: %@" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozestupy: %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abstände: %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aralık: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "间距：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間距：%@"
+          }
+        }
+      }
     },
     "Split" : {
       "comment" : "Localized string key for a menu bar shape kind that splits the menu bar between its leading and trailing sides.",
@@ -45077,8 +47149,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+            "state" : "translated",
+            "value" : "Thaw, menü çubuğunuz üzerinde tam kontrol sağlar — karmaşayı gizleyin, görünümü özelleştirin ve iş akışınızı otomatikleştirin."
           }
         },
         "uk" : {
@@ -45197,8 +47269,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+            "state" : "translated",
+            "value" : "Thaw uygulamasının menü çubuğunuzu yönetebilmesi için birkaç izne ihtiyacı var. Bu izinleri şimdi verebilir veya daha sonra Ayarlar üzerinden tanımlayabilirsiniz."
           }
         },
         "uk" : {
@@ -46302,7 +48374,32 @@
       }
     },
     "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato položka zůstala mezi zobrazenými, aby se nezasekla mimo obrazovku. Zkuste ji přesunout za chvilku znovu."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öge, ekranın dışında takılıp kalmaması için görünür bölümde bırakıldı. Bir süre sonra tekrar sürüklemeyi deneyin."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该项目在可见区域，因此不会卡在屏幕外。稍后尝试再次拖动它。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該項目在可見區段，因此不會卡在螢幕外。稍後嘗試再次拖曳它。"
+          }
+        }
+      }
     },
     "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook." : {
       "comment" : "A description of the hooks that run only when a profile is applied.",
@@ -46921,7 +49018,32 @@
       }
     },
     "This will overwrite the settings of ^[%lld displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tímto přepíšete nastavení ^[%lld displejů](inflect: true) globální šablonou. Pokud se změní rozložení aktivního displeje, Thaw znovu spustí každou aplikaci s položkou v řádku nabídek. Při opětovném spuštění aplikací může dojít ke ztrátě neuložených dat, průběhu nebo dočasného stavu aplikace."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu işlem, ^[%lld ekranın](inflect: true) ayarlarının üzerine genel şablonu yazacaktır. Etkin ekranın aralık ayarları değişirse Thaw, menü çubuğu ögesine sahip her uygulamayı yeniden başlatacaktır. Uygulamaları yeniden başlatmak; kaydedilmemiş ayarların, ilerlemenin veya geçici uygulama tercihlerinin kaybolmasına neden olabilir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会用全局模版覆盖 %lld 个显示器的设置. 如果活动显示器的间距改变, Thaw 会重启所有菜单栏里的应用. 重启应用可能导致未保存的输入，进度，或应用状态丢失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這將以全域模板覆寫 %lld 個顯示器的設定。若作用中顯示器的間距改變，Thaw 將重新啟動每個具有選單列項目的應用程式。重新啟動應用程式可能導致尚未儲存的輸入、進度或暫存狀態遺失。"
+          }
+        }
+      }
     },
     "This will reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A message displayed in an alert when the user confirms resetting all settings.",
@@ -47208,8 +49330,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "タイムアウト"
           }
         },
         "ko" : {
@@ -48446,8 +50568,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+            "state" : "translated",
+            "value" : "Tek bir tuş vuruşuyla herhangi bir eylemi tetikleyin. Thaw uygulamasının yaptığınız her şeye uyum sağlaması için otomatik yeniden gizleme zamanlayıcılarını ve Odak Filtresi entegrasyonunu birleştirin."
           }
         },
         "uk" : {
@@ -49118,8 +51240,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "アクティブなプロファイルを変新"
           }
         },
         "ko" : {
@@ -49356,8 +51478,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "すべてのプロファイルを変新"
           }
         },
         "ko" : {
@@ -50024,7 +52146,38 @@
       }
     },
     "Updates" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualizace"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updates"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Güncellemeler"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新"
+          }
+        }
+      }
     },
     "Use %@ Bar" : {
       "comment" : "A toggle that lets the user enable or disable the use of the \\(Constants.displayName) Bar. The argument is the name of the \\(Constants.displayName) Bar.",
@@ -50146,7 +52299,38 @@
       }
     },
     "Use different settings for Light and Dark Mode" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použít různá nastavení pro světlý a tmavý režim"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verschiedene Einstellungen für helles und dunkles Erscheinungsbild"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Açık ve Koyu Mod için farklı ayarlar kullanın"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为亮色和暗色模式应用不同的设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為亮色與暗色模式啟用不同的設定"
+          }
+        }
+      }
     },
     "Use dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether to use different appearance settings based on the current system appearance.",
@@ -50506,7 +52690,32 @@
       }
     },
     "Use the Thaw Bar while items are overflowed" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použít lištu Thaw při přeplnění řádku nabídek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ögeler taştığında Thaw Çubuğunu kullanın"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当项目溢出时，使用 Thaw Bar"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目溢出時使用 Thaw Bar"
+          }
+        }
+      }
     },
     "Version %@ (%@)" : {
       "comment" : "A label displaying the current version and build number of the app. The first argument is the version string. The second argument is the build string.",
@@ -50866,7 +53075,38 @@
       }
     },
     "View Preview Builds" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazit předběžná sestavení"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschauversionen anzeigen"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ön izleme Sürümlerini Görüntüle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看预览版构建"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看預覽版構建"
+          }
+        }
+      }
     },
     "Visible" : {
       "comment" : "Localized string key for the display string of a menu bar section.",
@@ -51273,8 +53513,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Welcome to Thaw"
+            "state" : "translated",
+            "value" : "Thawへようこそ"
           }
         },
         "ko" : {
@@ -51315,8 +53555,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Welcome to Thaw"
+            "state" : "translated",
+            "value" : "Thaw uygulamasına hoş geldiniz"
           }
         },
         "uk" : {
@@ -51440,8 +53680,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+            "state" : "translated",
+            "value" : "Bir ekran geçişi Thaw uygulamasının farklı bir menü çubuğu aralığı uygulamasını gerektirdiğinde, Thaw menü çubuğu ögesine sahip uygulamaları yeniden başlatır. Uygulamaları yeniden başlatmak; kaydedilmemiş ayarların, ilerlemenin veya geçici uygulama tercihlerinin kaybolmasına neden olabilir."
           }
         },
         "uk" : {
@@ -51499,8 +53739,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+            "state" : "translated",
+            "value" : "Amikor egy profil aktív, válszd ki hogy a térközváltozások csak az aktív profilhoz vagy az összes profilhoz legyenek elmentve."
           }
         },
         "id" : {
@@ -51559,14 +53799,14 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+            "state" : "translated",
+            "value" : "Bir profil etkinken, aralık değişikliklerinin yalnızca etkin profile mi yoksa tüm profillere mi kaydedileceğini seçin."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+            "state" : "translated",
+            "value" : "Коли профіль активний, виберіть, чи зміни інтервалів слід зберігати лише в активному профілі, чи у всіх профілях."
           }
         },
         "vi" : {
@@ -51713,8 +53953,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Když otevřete ikonu řádku nabídek z vyhledávacího panelu, přesune se ukazatel myši k ní, takže se její nabídka objeví pod ukazatelem."
+            "state" : "translated",
+            "value" : "Když otevřete položku řádku nabídek z vyhledávacího panelu, přesune se ukazatel myši vedle ní, aby se pod ukazatelem zobrazila její nabídka."
           }
         },
         "de" : {
@@ -51797,8 +54037,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bir menü çubuğu ögesini arama panelinden açtığınızda, fare imleci ögenin yanına taşınır ve menüsü imlecin altında görünür."
+            "state" : "translated",
+            "value" : "Arama panelinden bir menü çubuğu ögesi açtığınızda, farenin imlecini ögenin yanına getirin; böylece menüsü imlecin altında görünür."
           }
         },
         "uk" : {
@@ -51815,20 +54055,45 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "从搜索面板打开菜单栏项目时，鼠标指针会移动到该项目旁边，使其菜单显示在指针下方。"
+            "state" : "translated",
+            "value" : "从搜索面板打开菜单栏项时，将鼠标指针移动到该项旁边，其菜单会出现在指针下方。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "從搜尋面板開啟選單列項目時，滑鼠游標會移到該項目旁邊，使其選單顯示在游標下方。"
+            "state" : "translated",
+            "value" : "從搜尋面板開啟選單列項目時，將滑鼠指標移到該項目旁邊，使其選單出現在指標下方。"
           }
         }
       }
     },
     "While rearranging" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Během uspořádávání"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeniden düzenlerken"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新排列时"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新排序時"
+          }
+        }
+      }
     },
     "Whitelisted Applications" : {
       "comment" : "A heading for the list of whitelisted apps.",
@@ -52103,8 +54368,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
+            "state" : "translated",
+            "value" : "Megerősítés kikapcsolása esetén a térköz mentése ide"
           }
         },
         "id" : {
@@ -52121,8 +54386,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
+            "state" : "translated",
+            "value" : "確認なしで間隔を保存するプロファイル"
           }
         },
         "ko" : {
@@ -52163,14 +54428,14 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
+            "state" : "translated",
+            "value" : "Onay almadan, aralığı şuraya kaydet"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
+            "state" : "translated",
+            "value" : "Якщо підтвердження відсутнє, зберегти інтервали в"
           }
         },
         "vi" : {
@@ -52598,8 +54863,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+            "state" : "translated",
+            "value" : "データはMac内にのみ保存され、収集・共有されません。"
           }
         },
         "ko" : {
@@ -52640,8 +54905,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+            "state" : "translated",
+            "value" : "Verileriniz Mac bilgisayarınızda kalır — hiçbir şey toplanmaz veya paylaşılmaz."
           }
         },
         "uk" : {
