@@ -4388,6 +4388,9 @@
         }
       }
     },
+    "Alpha" : {
+      "comment" : "A segment in the update channel picker that displays \"Alpha\"."
+    },
     "Always Hidden" : {
 
     },
@@ -9177,6 +9180,9 @@
         }
       }
     },
+    "Beta" : {
+      "comment" : "A segment in the update channel picker that displays \"Beta\"."
+    },
     "Border" : {
       "comment" : "A toggle that lets the user enable or disable the border around the view.",
       "localizations" : {
@@ -13591,6 +13597,9 @@
           }
         }
       }
+    },
+    "Couldn't move %@ right now." : {
+
     },
     "Couldn't move %@ to the always-hidden section." : {
 
@@ -26742,7 +26751,7 @@
         }
       }
     },
-    "macOS 27 Is Not Yet Supported" : {
+    "macOS %lld Is Not Yet Supported" : {
 
     },
     "macOS draws a solid menu bar while Reduce Transparency is on, so %@ cannot tint or reshape it. Turn the setting off to see these effects." : {
@@ -44976,6 +44985,9 @@
         }
       }
     },
+    "Switch to Alpha Updates" : {
+
+    },
     "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow." : {
       "comment" : "Description of the welcome onboarding slide.",
       "localizations" : {
@@ -46048,6 +46060,9 @@
         }
       }
     },
+    "The %@ section is collapsed, so its divider is offscreen. Open the section and try dragging the item again." : {
+
+    },
     "The amount of time to wait before showing a tooltip over a menu bar item." : {
       "comment" : "Label for a slider that controls the delay before showing a tooltip over a menu bar item.",
       "localizations" : {
@@ -46527,7 +46542,10 @@
         }
       }
     },
-    "This version of Thaw is not yet compatible with macOS 27. Preview builds are available on GitHub Releases, and macOS 27 support will be delivered through the alpha update channel." : {
+    "This version of Thaw is not yet compatible with macOS %lld. Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel." : {
+
+    },
+    "This version of Thaw is not yet compatible with macOS %lld. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub." : {
 
     },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
