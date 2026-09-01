@@ -8,10 +8,7 @@ body:
     attributes:
       value: |
         Check [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md) and search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) first.
-
-        > [!IMPORTANT]
-        > macOS 27 (Golden Gate) support, preview builds, and "it doesn't work on 27" all belong in [#687](https://github.com/thaw-app/Thaw/issues/687). We close new issues about that as duplicates.
-
+        
   - type: checkboxes
     id: checks
     attributes:
