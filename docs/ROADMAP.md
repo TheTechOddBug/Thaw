@@ -28,7 +28,7 @@ These were on the list above until 2.1.0 took them off it:
 - Individual spacer items
 - Menu bar item groups
 - Show menu bar items when trigger conditions are met
-- A hotkey to enable and disable auto rehide
+- A hotkey to enable and disable auto-rehide
 
 ## Suggesting changes
 

@@ -28,7 +28,7 @@ if command -v fzf >/dev/null; then
     tag="$(printf '%s\n' "${tags[@]}" | fzf --prompt='tag> ' --height=20)"
 else
     PS3="tag> "
-    select tag in "${tags[@]:0:20}"; do [[ -n "$tag" ]] && break; done
+    select tag in "${tags[@]}"; do [[ -n "$tag" ]] && break; done
 fi
 [[ -n "${tag:-}" ]] || { echo "no tag selected" >&2; exit 1; }
 
@@ -40,14 +40,18 @@ ask() { # ask <prompt> <default-y|default-n>
     [[ "$reply" =~ ^[Yy] ]]
 }
 
-dry_run=false; publish_release=false; publish_appcast=true
+dry_run=false; publish_release=false; publish_appcast=false
 discussion_category=none
 
 ask "Dry run (build and report, publish nothing)?" n && dry_run=true
 if [[ "$dry_run" == false ]]; then
     ask "Publish the GitHub Release (otherwise it stays a draft)?" n && publish_release=true
-    ask "Push the signed appcast to thaw-app/updates?" y || publish_appcast=false
+    # The appcast and the discussion both require a published release: the
+    # workflow gates them on publish_release, so asking otherwise collects an
+    # answer it discards and prints it in the summary below.
     if [[ "$publish_release" == true ]]; then
+        publish_appcast=true
+        ask "Push the signed appcast to thaw-app/updates?" y || publish_appcast=false
         PS3="discussion category> "
         select discussion_category in none Announcements General Ideas; do
             [[ -n "$discussion_category" ]] && break
