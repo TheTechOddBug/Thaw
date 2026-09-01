@@ -7,6 +7,42 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [Unreleased]
+
+Please report issues at
+[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+### Fixed
+
+1. A drag into an empty, collapsed Always-Hidden section now works even
+   when the Hidden section is also collapsed (#1010). The #988 reveal
+   expanded only the destination section, but the always-hidden divider
+   parks to the left of the hidden section's content: with the hidden
+   section collapsed behind its 10000-point spacer, the revealed divider
+   was re-placed just left of that still-parked content and never came
+   onscreen, so every drag timed out into the "open the section"
+   refusal — advice that could not help, since only expanding the hidden
+   section puts the always-hidden boundary onscreen. The reveal now
+   expands the hidden section alongside the always-hidden section and
+   restores both once the item settles.
+2. Menu bar appearance re-homing after a space switch no longer depends on
+   the per-display space query alone (#794). On macOS 26 setups where that
+   query stops answering, the old code silently assumed the overlay panel
+   was in place, so the tint, shape, and background stayed stuck on the
+   launch space for every recovery path. The panel on the display that owns
+   the active menu bar now falls back to the global active space (the two
+   coincide there by definition), and the decision logs its inputs so the
+   remaining field reports can be pinned to a branch.
+3. The 1.x click gestures survive the upgrade to 2.x (#1012). Option-click
+   and double-click on the menu bar toggled the always-hidden section
+   unconditionally in 1.x; 2.0 turned both into opt-in settings that
+   default to off and whose keys did not exist for upgraders, so the
+   gestures silently stopped working. Both settings now come up on when
+   they have never been explicitly set, and an explicit choice (including
+   off) is never overwritten. The control items' phantom-click suppression
+   no longer swallows the right-click menu, which it also blocked whenever
+   the menu bar transiently had no item windows on the active space.
+
 ## [2.0.1-rc.1]
 
 Please report issues at
