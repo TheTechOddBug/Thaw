@@ -7,70 +7,60 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [2.0.1]
+
+Help us translate Thaw at [crowdin.com/project/thaw](https://crowdin.com/project/thaw).
+
+Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+Five fixes from field reports against 2.0.0, nothing new. The one most people will notice: option-click and double-click on the menu bar toggled the always-hidden section in every 1.x build, and both went dead the moment you upgraded to 2.x (#1012). The largest under the hood: after a restart, the menu bar could sit wherever macOS had dropped the items, and re-applying the profile in Settings refused to run at all (#991). The rest: item previews work again in the layout editor on mixed Retina and non-Retina setups (#990), a drag into an empty collapsed section completes instead of deadlocking or timing out (#988, #1010), and the menu bar appearance follows space switches on multi-display systems, including the macOS 26 setups where the per-display space query stops answering (#794). Two release candidates carried the work; their entries below keep the per-fix detail.
+
+---
+
+### Upgrade from 2.0.0
+
+1. Update in place through Sparkle.
+2. If you came from 1.x and never touched the two click-gesture toggles in Settings, General, both come up on after this update, the way they behaved in 1.x. Turn either one off there and Thaw keeps that choice. Anyone who already set them explicitly, on or off, is left alone.
+3. No schema or `defaults` changes. Profiles and saved layouts carry over untouched.
+
+---
+
+### Main fixes
+
+1. The 1.x click gestures survive the upgrade to 2.x (#1012). Option- click and double-click on the menu bar toggled the always-hidden section unconditionally in 1.x. 2.0 turned both into opt-in settings that default to off, and the keys behind them did not exist for anyone upgrading, so both gestures silently stopped working with no setting visibly changed. Both now come up on when they have never been explicitly set, and an explicit choice, including off, is never overwritten. Separately, the control items' phantom-click suppression sat in front of the whole event switch and swallowed right-click along with it, so the context menu was unreachable whenever the menu bar transiently had no item windows on the active space. That guard is now scoped to the left mouse-down it was written for.
+2. Profile applies survive a missing always-hidden divider (#991). After a restart the divider rests parked offscreen, and on macOS 26 that parked window intermittently drops out of the item list Thaw enumerates. Lookup then returned nil for the divider while downstream steps still treated the pair as fully resolved: applies skipped wholesale ("always-hidden divider unresolved while its section is enabled") or abandoned after the hidden-boundary moves had already run ("control items degraded before moving AH_ctrl" in the attached log, four milliseconds after a clean tag resolution). The reporter's bar never matched the saved profile, and manual re-applies failed the same way. The control-item pair now recovers the divider from its own window record, the authoritative channel the hidden divider has had since #754, and refuses to adopt a lookalike window from a duplicate Thaw instance. A divider the window server no longer knows is still refused, now under an accurate message instead of "control items degraded".
+3. Layout editor previews render on mixed-scale display setups (#990). Composite captures compared pixel width against bounds times the display scale and rejected any mismatch, but on a 1.0x external beside a Retina display the capture backend picks its own scale: the log recorded 70 rejections, an empty image cache, and gray placeholders for every item. Both composite paths now derive the scale from the capture itself, the same check single-item captures have used since #851, and degenerate zero-width windows are filtered from the bounds union so one orphaned window cannot reject a whole batch.
+4. A drag into an empty collapsed section completes instead of refusing forever (#988, #1010). The #923 guard refuses an editor drag whose destination divider is parked offscreen and suggests opening the section first; with every item in always-hidden there was nothing to open and nowhere to drop, which is exactly the reporter's bar. Thaw now reveals the empty destination, retargets the drag onto the freshly revealed divider, and re-conceals the section once the item settles. The first cut of that reveal expanded only the destination section, and the always-hidden divider parks to the left of the hidden section's content: with the hidden section collapsed behind its 10000-point spacer, the revealed divider was re-placed just left of that still-parked content and never came onscreen, so the drag still timed out into the same refusal. The reveal now expands the hidden section alongside the always-hidden section and restores both once the item settles. If the divider does not return within two seconds the old refusal stands. A drag cancelled mid-reveal, or one the move watchdog gives up on, restores the sections' previous state instead of leaving them showing. Disabled sections never reveal.
+5. Overlay panels stay on the space you are looking at (#794). A panel kept whatever space was current when it was last shown; with "displays have separate spaces" enabled, every ctrl-arrow switch revealed a vanilla menu bar on both displays, and the tint, shape, and background appeared only on the space that was current at launch. Panels now check per display whether they sit on that display's current space and re-home only when actually stranded. Because the check compares each panel against its own display, the fullscreen drift that forced the old flag's removal cannot return. A re-check shortly after each switch re-shows a panel that a raced space read leaves behind, so the old 60-second housekeeping timer stays a backstop rather than the recovery path. On the macOS 26 setups behind the reports that stayed open after that first cut, the per-display space query stops answering, and the code read the silence as "the overlay panel is already in place", so the tint, shape, and background stayed stuck on the launch space for every recovery path. The panel on the display that owns the active menu bar now falls back to the global active space, which coincides with that display's current space by definition. The decision logs its inputs, so any report that survives this can be pinned to a branch.
+
+---
+
+### Dependencies & localization
+
+- Crowdin sync for `Localizable.xcstrings` (#992, #1019, #1021).
+- github-actions group bumped with four updates (#1011), and `softprops/action-gh-release` bumped on its own (#1018).
+
 ## [2.0.1-rc.2]
 
-Please report issues at
-[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
 
-Three fixes from rc.1 field reports, nothing new. The one most people
-will notice: option-click and double-click on the menu bar toggled the
-always-hidden section in every 1.x build, and both went dead the moment
-you upgraded to 2.x. The other two are narrower. A drag into an empty
-always-hidden section still timed out when the hidden section happened to
-be collapsed as well, and the space-switch re-homing that landed in rc.1
-did nothing at all on the macOS 26 setups where the per-display space
-query stops answering.
+Three fixes from rc.1 field reports, nothing new. The one most people will notice: option-click and double-click on the menu bar toggled the always-hidden section in every 1.x build, and both went dead the moment you upgraded to 2.x. The other two are narrower. A drag into an empty always-hidden section still timed out when the hidden section happened to be collapsed as well, and the space-switch re-homing that landed in rc.1 did nothing at all on the macOS 26 setups where the per-display space query stops answering.
 
 ---
 
 ### Upgrade from 2.0.1-rc.1
 
 1. Update in place through Sparkle.
-2. If you came from 1.x and never touched the two click-gesture toggles
-   in Settings, General, both come up on after this update, the way they
-   behaved in 1.x. Turn either one off there and Thaw keeps that choice.
-   Anyone who already set them explicitly, on or off, is left alone.
-3. No schema or `defaults` changes. Profiles and saved layouts carry over
-   untouched.
+2. If you came from 1.x and never touched the two click-gesture toggles in Settings, General, both come up on after this update, the way they behaved in 1.x. Turn either one off there and Thaw keeps that choice. Anyone who already set them explicitly, on or off, is left alone.
+3. No schema or `defaults` changes. Profiles and saved layouts carry over untouched.
 
 ---
 
 ### Main fixes
 
-1. The 1.x click gestures survive the upgrade to 2.x (#1012).
-   Option-click and double-click on the menu bar toggled the
-   always-hidden section unconditionally in 1.x. 2.0 turned both into
-   opt-in settings that default to off, and the keys behind them did not
-   exist for anyone upgrading, so both gestures silently stopped working
-   with no setting visibly changed. Both now come up on when they have
-   never been explicitly set, and an explicit choice, including off, is
-   never overwritten. Separately, the control items' phantom-click
-   suppression sat in front of the whole event switch and swallowed
-   right-click along with it, so the context menu was unreachable
-   whenever the menu bar transiently had no item windows on the active
-   space. That guard is now scoped to the left mouse-down it was written
-   for.
-2. A drag into an empty, collapsed always-hidden section completes even
-   when the hidden section is collapsed too (#1010). The reveal added in
-   #988 expanded only the destination section, but the always-hidden
-   divider parks to the left of the hidden section's content: with the
-   hidden section collapsed behind its 10000-point spacer, the revealed
-   divider was re-placed just left of that still-parked content and never
-   came onscreen. Every such drag timed out into the "open the section
-   first" refusal, advice that could not help, since only expanding the
-   hidden section puts the always-hidden boundary onscreen. The reveal
-   now expands the hidden section alongside the always-hidden section and
-   restores both once the item settles.
-3. Menu bar appearance re-homes after a space switch even where the
-   per-display space query goes quiet (#794). On the macOS 26 setups
-   behind the reports still open against rc.1, that query stops
-   answering, and the old code read the silence as "the overlay panel is
-   already in place", so the tint, shape, and background stayed stuck on
-   the launch space for every recovery path. The panel on the display
-   that owns the active menu bar now falls back to the global active
-   space, which coincides with that display's current space by
-   definition. The decision logs its inputs, so any report that survives
-   this can be pinned to a branch.
+1. The 1.x click gestures survive the upgrade to 2.x (#1012). Option-click and double-click on the menu bar toggled the always-hidden section unconditionally in 1.x. 2.0 turned both into opt-in settings that default to off, and the keys behind them did not exist for anyone upgrading, so both gestures silently stopped working with no setting visibly changed. Both now come up on when they have never been explicitly set, and an explicit choice, including off, is never overwritten. Separately, the control items' phantom-click suppression sat in front of the whole event switch and swallowed right-click along with it, so the context menu was unreachable whenever the menu bar transiently had no item windows on the active space. That guard is now scoped to the left mouse-down it was written for.
+2. A drag into an empty, collapsed always-hidden section completes even when the hidden section is collapsed too (#1010). The reveal added in #988 expanded only the destination section, but the always-hidden divider parks to the left of the hidden section's content: with the hidden section collapsed behind its 10000-point spacer, the revealed divider was re-placed just left of that still-parked content and never came onscreen. Every such drag timed out into the "open the section first" refusal, advice that could not help, since only expanding the hidden section puts the always-hidden boundary onscreen. The reveal now expands the hidden section alongside the always-hidden section and restores both once the item settles.
+3. Menu bar appearance re-homes after a space switch even where the per-display space query goes quiet (#794). On the macOS 26 setups behind the reports still open against rc.1, that query stops answering, and the old code read the silence as "the overlay panel is already in place", so the tint, shape, and background stayed stuck on the launch space for every recovery path. The panel on the display that owns the active menu bar now falls back to the global active space, which coincides with that display's current space by definition. The decision logs its inputs, so any report that survives this can be pinned to a branch.
 
 ---
 
@@ -81,82 +71,25 @@ query stops answering.
 
 ## [2.0.1-rc.1]
 
-Please report issues at
-[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
 
-Four fixes from field reports, nothing new. The largest: after a restart,
-the menu bar could sit wherever macOS had dropped the items, and
-re-applying the profile in Settings refused to run at all (#991). The
-always-hidden divider's window had dropped out of the item list while
-parked offscreen, so every layout apply that needed it either skipped
-itself or quit partway through. Thaw now recovers that divider from its
-own window record instead of searching the list. The rest: item previews
-work again in the layout editor on mixed Retina and non-Retina setups
-(#990), a drag into an empty collapsed section completes instead of
-deadlocking (#988), and overlay panels follow space switches on
-multi-display systems (#794).
+Four fixes from field reports, nothing new. The largest: after a restart, the menu bar could sit wherever macOS had dropped the items, and re-applying the profile in Settings refused to run at all (#991). The always-hidden divider's window had dropped out of the item list while parked offscreen, so every layout apply that needed it either skipped itself or quit partway through. Thaw now recovers that divider from its own window record instead of searching the list. The rest: item previews work again in the layout editor on mixed Retina and non-Retina setups (#990), a drag into an empty collapsed section completes instead of deadlocking (#988), and overlay panels follow space switches on multi-display systems (#794).
 
 ---
 
 ### Upgrade from 2.0.0
 
 1. Update in place through Sparkle.
-2. No settings, schema, or `defaults` changes in this release. Profiles
-   and saved layouts carry over untouched.
+2. No settings, schema, or `defaults` changes in this release. Profiles and saved layouts carry over untouched.
 
 ---
 
 ### Main fixes
 
-1. Profile applies survive a missing always-hidden divider (#991). After
-   a restart the divider rests parked offscreen, and on macOS 26 that
-   parked window intermittently drops out of the item list Thaw
-   enumerates. Lookup then returned nil for the divider while downstream
-   steps still treated the pair as fully resolved: applies skipped
-   wholesale ("always-hidden divider unresolved while its section is
-   enabled") or abandoned after the hidden-boundary moves had already
-   run ("control items degraded before moving AH_ctrl" in the attached
-   log, four milliseconds after a clean tag resolution). The reporter's
-   bar never matched the saved profile, and manual re-applies failed the
-   same way. The control-item pair now recovers the divider from its own
-   window record, the authoritative channel the hidden divider has had
-   since #754, and refuses to adopt a lookalike window from a duplicate
-   Thaw instance. A divider the window server no longer knows is still
-   refused, now under an accurate message instead of "control items
-   degraded".
-2. Layout editor previews render on mixed-scale display setups (#990).
-   Composite captures compared pixel width against bounds times the
-   display scale and rejected any mismatch, but on a 1.0x external
-   beside a Retina display the capture backend picks its own scale: the
-   log recorded 70 rejections, an empty image cache, and gray
-   placeholders for every item. Both composite paths now derive the
-   scale from the capture itself, the same check single-item captures
-   have used since #851, and degenerate zero-width windows are filtered
-   from the bounds union so one orphaned window cannot reject a whole
-   batch.
-3. A drag into an empty collapsed section completes instead of refusing
-   forever (#988). The #923 guard refuses an editor drag whose
-   destination divider is parked offscreen and suggests opening the
-   section first; with every item in always-hidden there was nothing to
-   open and nowhere to drop, which is exactly the reporter's bar. Thaw
-   now reveals the empty destination, retargets the drag onto the
-   freshly revealed divider, and re-conceals the section once the item
-   settles. If the divider does not return within two seconds the old
-   refusal stands. A drag cancelled mid-reveal, or one the move watchdog
-   gives up on, restores the section's previous state instead of leaving
-   it showing. Disabled sections never reveal.
-4. Overlay panels stay on the space you are looking at (#794). A panel
-   kept whatever space was current when it was last shown; with
-   "displays have separate spaces" enabled, every ctrl-arrow switch
-   revealed a vanilla menu bar on both displays, and the tint, shape,
-   and background appeared only on the space that was current at
-   launch. Panels now check per display whether they sit on that
-   display's current space and re-home only when actually stranded.
-   Because the check compares each panel against its own display, the
-   fullscreen drift that forced the old flag's removal cannot return.
-   A re-check shortly after each switch re-shows a panel that a raced
-   space read leaves behind, so the old 60-second housekeeping timer
-   stays a backstop rather than the recovery path.
+1. Profile applies survive a missing always-hidden divider (#991). After a restart the divider rests parked offscreen, and on macOS 26 that parked window intermittently drops out of the item list Thaw enumerates. Lookup then returned nil for the divider while downstream steps still treated the pair as fully resolved: applies skipped wholesale ("always-hidden divider unresolved while its section is enabled") or abandoned after the hidden-boundary moves had already run ("control items degraded before moving AH_ctrl" in the attached log, four milliseconds after a clean tag resolution). The reporter's bar never matched the saved profile, and manual re-applies failed the same way. The control-item pair now recovers the divider from its own window record, the authoritative channel the hidden divider has had since #754, and refuses to adopt a lookalike window from a duplicate Thaw instance. A divider the window server no longer knows is still refused, now under an accurate message instead of "control items degraded".
+2. Layout editor previews render on mixed-scale display setups (#990). Composite captures compared pixel width against bounds times the display scale and rejected any mismatch, but on a 1.0x external beside a Retina display the capture backend picks its own scale: the log recorded 70 rejections, an empty image cache, and gray placeholders for every item. Both composite paths now derive the scale from the capture itself, the same check single-item captures have used since #851, and degenerate zero-width windows are filtered from the bounds union so one orphaned window cannot reject a whole batch.
+3. A drag into an empty collapsed section completes instead of refusing forever (#988). The #923 guard refuses an editor drag whose destination divider is parked offscreen and suggests opening the section first; with every item in always-hidden there was nothing to open and nowhere to drop, which is exactly the reporter's bar. Thaw now reveals the empty destination, retargets the drag onto the freshly revealed divider, and re-conceals the section once the item settles. If the divider does not return within two seconds the old refusal stands. A drag cancelled mid-reveal, or one the move watchdog gives up on, restores the section's previous state instead of leaving it showing. Disabled sections never reveal.
+4. Overlay panels stay on the space you are looking at (#794). A panel kept whatever space was current when it was last shown; with "displays have separate spaces" enabled, every ctrl-arrow switch revealed a vanilla menu bar on both displays, and the tint, shape, and background appeared only on the space that was current at launch. Panels now check per display whether they sit on that display's current space and re-home only when actually stranded. Because the check compares each panel against its own display, the fullscreen drift that forced the old flag's removal cannot return. A re-check shortly after each switch re-shows a panel that a raced space read leaves behind, so the old 60-second housekeeping timer stays a backstop rather than the recovery path.
 
 ## [2.0.0]
 
