@@ -566,6 +566,54 @@ extension MenuBarItemManager {
         return ghostIDs
     }
 
+    /// Returns windows that claim this instance's own namespace without
+    /// being one of its status items.
+    ///
+    /// Control Center can outlive the Thaw process whose status item it
+    /// hosted and keep serving that window. #1032's reporter carried one —
+    /// `com.stonerl.Thaw:com.stonerl.Thaw`, window 639 — across relaunches
+    /// until `killall ControlCenter` cleared it. Nothing about it is usable:
+    /// it captures no image, and a move anchored on it can never verify.
+    ///
+    /// Two things took it for real, and the second is what made the session
+    /// unusable. It was planned against as an unmanaged item, so live items
+    /// were moved relative to a window with no owner. And it is self-titled
+    /// under our own namespace, which is the first signal
+    /// ``LayoutSolver/liveIdentitiesAreDegraded(_:)`` reads as a bar-wide
+    /// `kCGWindowName` degradation — so 436 readings across the reporter's
+    /// three logs were rejected as degraded and the cache never left the
+    /// state it was in when the orphan appeared. Dropping the window here
+    /// keeps it out of that check, which already expects ghost windows to
+    /// be gone by the time it runs.
+    ///
+    /// Ownership is decided by window number, never by title, so one of our
+    /// control items whose title really has degraded stays in the reading
+    /// and still reaches the degradation check. Like
+    /// ``ghostControlItemWindowIDs(in:ownWindowIDsByTitle:)``, the filter is
+    /// self-validating: with none of our own windows present there is no
+    /// baseline to call anything an orphan against, so nothing is dropped.
+    ///
+    /// ``LayoutSolver`` applies the same rule to the persisted side, where
+    /// the misattribution is written rather than observed.
+    static nonisolated func orphanedOwnNamespaceWindowIDs(
+        in items: [MenuBarItem],
+        ownWindowIDs: Set<CGWindowID>
+    ) -> Set<CGWindowID> {
+        guard items.contains(where: { ownWindowIDs.contains($0.windowID) }) else { return [] }
+        return Set(
+            items.lazy
+                .filter { item in
+                    item.tag.namespace == .thaw
+                        && !ownWindowIDs.contains(item.windowID)
+                        // A spacer's window comes up before its title does,
+                        // so a fresh one reads as a generic item under our
+                        // namespace until the title lands.
+                        && !MenuBarSpacerManager.isSpacerTag(item.tag)
+                }
+                .map(\.windowID)
+        )
+    }
+
     private func ownControlItemWindowIDsByTitle() -> [String: CGWindowID] {
         guard let menuBarManager = appState?.menuBarManager else { return [:] }
         return MenuBarSection.Name.allCases.reduce(into: [:]) { result, name in
@@ -576,6 +624,23 @@ extension MenuBarItemManager {
             else { return }
             result[controlItem.identifier.rawValue] = windowID
         }
+    }
+
+    @discardableResult
+    private func dropOrphanedOwnNamespaceWindows(from items: inout [MenuBarItem]) -> Set<CGWindowID> {
+        // Window ownership, not the title, decides what is ours. A spacer
+        // whose window is up before its title answers here and nowhere else.
+        let spacerManager = appState?.spacerManager
+        let ownWindowIDs = Set(ownControlItemWindowIDsByTitle().values)
+            .union(items.lazy.map(\.windowID).filter { spacerManager?.ownsWindowID($0) == true })
+        let orphanIDs = Self.orphanedOwnNamespaceWindowIDs(in: items, ownWindowIDs: ownWindowIDs)
+        guard !orphanIDs.isEmpty else { return [] }
+        let descriptions = items.filter { orphanIDs.contains($0.windowID) }.map(\.tag.description)
+        MenuBarItemManager.diagLog.warning(
+            "cacheItemsRegardless: dropping \(orphanIDs.count) orphaned window(s) under our own namespace: \(descriptions)"
+        )
+        items.removeAll { orphanIDs.contains($0.windowID) }
+        return orphanIDs
     }
 
     @discardableResult
@@ -1401,7 +1466,14 @@ extension MenuBarItemManager {
         // expose control-item titles under foreign window IDs. Exclude those
         // windows from every cache decision so they cannot be treated as new
         // unmanaged items or make the normal window-ID comparison churn.
-        let ghostControlWindowIDs = dropGhostControlItemWindows(from: &items)
+        var ghostWindowIDs = dropGhostControlItemWindows(from: &items)
+
+        // A window Control Center kept serving for a Thaw process that is
+        // gone reads as one of ours and is nothing of the sort. Drop it
+        // before the degradation check below, which would otherwise read a
+        // single permanent orphan as the whole bar having lost its names,
+        // and hold a stale cache for as long as the orphan lasts (#1032).
+        ghostWindowIDs.formUnion(dropOrphanedOwnNamespaceWindows(from: &items))
 
         // A reading whose items are titled after their own owners identifies
         // nothing, and caching it rewrites the whole bar under a second set of
@@ -1513,7 +1585,7 @@ extension MenuBarItemManager {
         // sync with the managed item set and ignore those transient IDs in
         // the next raw-list comparison.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
-            .filter { !cloneWindowIDs.contains($0) && !ghostControlWindowIDs.contains($0) }
+            .filter { !cloneWindowIDs.contains($0) && !ghostWindowIDs.contains($0) }
         // NOTE: cacheActor.updateCachedItemWindowIDs/updateCachedCloneWindowIDs
         // are deliberately NOT called here. Committing them this early, before
         // the ControlItemPair guard below is known to succeed, would make
@@ -1598,7 +1670,7 @@ extension MenuBarItemManager {
             didRebuildControlItemsForCurrentFailureEpisode = false
             lastControlItemLookupFailureAt = nil
             cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-            cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
+            cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostWindowIDs))
             cacheActor.updateCachedControlCenterGenericWindowIDs(
                 Set(items.filter(\.tag.isControlCenterGenericItem).map(\.windowID))
             )
