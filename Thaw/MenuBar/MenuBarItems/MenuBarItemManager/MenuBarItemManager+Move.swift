@@ -54,13 +54,21 @@ extension MenuBarItemManager {
             // is its concealment mechanism, not hit-test slack; what matters
             // is that the drop point is its edge, which is the boundary
             // itself.
-            // The chevron is excluded: it is a control item but not a
-            // section boundary, and TemporaryShow anchors moves directly on
-            // it with .leftOfItem — biasing those drops would place the item
-            // one point left of an anchor that is not an edge between two
-            // sections, for no hit-test ambiguity resolved.
-            let sectionBias: CGFloat = targetItem.tag == .hiddenControlItem
-                || targetItem.tag == .alwaysHiddenControlItem ? 1 : 0
+            // The chevron was excluded once, on the theory that it is a
+            // control item but not a section boundary, so a drop on its
+            // edge resolves no ambiguity worth paying for. #1035 kills that
+            // theory as well. TemporaryShow anchors its reveal on the
+            // chevron with .leftOfItem, and the reporter's log has attempt 2
+            // planning targetMinX=837 and then finding the item at
+            // itemMinX=863 — landed to the chevron's right, the same
+            // wrong-side drop #923 described, caught by the same ordinal
+            // check. What makes a drop point ambiguous is that it is an
+            // item's own edge; whether that item happens to divide two
+            // sections has nothing to do with it.
+            let targetIsControlItem = targetItem.tag == .hiddenControlItem
+                || targetItem.tag == .alwaysHiddenControlItem
+                || targetItem.tag == .visibleControlItem
+            let sectionBias: CGFloat = targetIsControlItem ? 1 : 0
             return switch self {
             case .leftOfItem:
                 CGPoint(x: targetBounds.minX - sectionBias, y: targetY)

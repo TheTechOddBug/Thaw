@@ -101,6 +101,59 @@ struct MoveEventCoordinatesTests {
         )
     }
 
+    /// #1035: the chevron is the anchor TemporaryShow reveals against, and
+    /// it was left unbiased because it divides no sections. The reporter's
+    /// log shows what that costs — attempt 2 planned `targetMinX=837.0` and
+    /// then measured `itemMinX=863.0`, i.e. the item landed to the right of
+    /// a 26pt chevron it was supposed to land left of.
+    @Test("A chevron destination is biased into the requested side")
+    func chevronTargetPointIsBiased() {
+        let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        // The geometry from the reporter's attempt 2.
+        let bounds = CGRect(x: 837, y: 0, width: 26, height: 33)
+        let target = MenuBarItem.fixture(
+            tag: .visibleControlItem,
+            windowID: 104,
+            bounds: bounds
+        )
+
+        let left = MenuBarItemManager.MoveDestination.leftOfItem(target).targetPoint(
+            in: bounds,
+            on: displayBounds
+        )
+
+        #expect(left == CGPoint(x: bounds.minX - 1, y: bounds.minY))
+        // The unbiased point was the chevron's own edge, which is the side
+        // AppKit got to choose from.
+        #expect(left.x != bounds.minX)
+        #expect(
+            MenuBarItemManager.MoveDestination.rightOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.maxX + 1, y: bounds.minY)
+        )
+    }
+
+    /// A parked chevron gets the same treatment as a parked section divider.
+    @Test("An off-screen chevron destination is biased too")
+    func offscreenChevronTargetPointIsBiased() {
+        let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        let bounds = CGRect(x: -4193, y: 0, width: 26, height: 33)
+        let target = MenuBarItem.fixture(
+            tag: .visibleControlItem,
+            windowID: 105,
+            bounds: bounds,
+            isOnScreen: false
+        )
+
+        #expect(
+            MenuBarItemManager.MoveDestination.leftOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.minX - 1, y: bounds.midY)
+        )
+    }
+
     /// An ordinary item is not a section boundary, so its edge is a real drop
     /// coordinate and must be left alone.
     @Test("A regular item destination gets no section bias")
