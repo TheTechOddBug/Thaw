@@ -141,7 +141,13 @@ nonisolated enum ScreenCapture {
     ///
     /// - Parameters:
     ///   - windowID: The identifier of the window to exclude (capture everything below it).
-    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
+    ///   - screenBounds: The region to capture, in Core Graphics global
+    ///     display coordinates — top-left origin, y increasing downward, the
+    ///     convention `CGDisplayBounds(_:)` returns and
+    ///     `SCStreamConfiguration.sourceRect` expects. An AppKit rect taken
+    ///     from `NSScreen.frame` uses the opposite vertical origin; passing
+    ///     one here captures the band mirrored to the other edge of the
+    ///     display rather than failing (#1033).
     ///   - displayID: The display to capture from.
     /// - Returns: The captured image, or nil if capture failed.
     static func captureScreenBelowWindow(
@@ -206,6 +212,16 @@ nonisolated enum ScreenCapture {
         configuration.width = Int((screenBounds.width * scale).rounded())
         configuration.height = Int((screenBounds.height * scale).rounded())
         configuration.sourceRect = localSourceRect
+
+        // The captured pixel dimensions come out the same whichever vertical
+        // origin the caller used, so a mirrored band still looks healthy in
+        // every other line this function logs. Record the rects themselves so
+        // a misplaced capture is legible from a log alone (#1033).
+        diagLog.debug(
+            "captureScreenBelowWindow: screenBounds=\(screenBounds.debugDescription) "
+                + "displayFrame=\(displayFrame.debugDescription) "
+                + "sourceRect=\(localSourceRect.debugDescription)"
+        )
 
         // Create stream and capture frame
         // Note: Caller owns the stream and is responsible for stopCapture().

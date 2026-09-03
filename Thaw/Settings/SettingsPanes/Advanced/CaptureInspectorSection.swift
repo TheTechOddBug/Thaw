@@ -118,6 +118,30 @@ struct CaptureInspectorSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Returns the menu bar band at the top of `displayBounds`.
+    ///
+    /// `displayBounds` and the result are both in Core Graphics global display
+    /// coordinates — top-left origin — which is what
+    /// ``ScreenCapture/captureScreenBelowWindow(excludingWindowID:screenBounds:displayID:)``
+    /// forwards to `SCStreamConfiguration.sourceRect`. The band therefore
+    /// starts at the display's own `minY` and grows downward.
+    ///
+    /// Building it from `NSScreen.frame` instead is the bug in #1033: AppKit
+    /// puts the origin at the bottom left, so `frame.maxY - menuBarHeight`
+    /// names the menu bar in AppKit terms and the bottom edge of the display
+    /// once it is read as a top-left-origin y. Nothing downstream can tell the
+    /// two apart — the band is the right size either way — so the inspector
+    /// captured whatever window sat at the bottom of the screen and presented
+    /// it as what Thaw reads.
+    static func menuBarBand(inDisplayBounds displayBounds: CGRect, menuBarHeight: CGFloat) -> CGRect {
+        CGRect(
+            x: displayBounds.minX,
+            y: displayBounds.minY,
+            width: displayBounds.width,
+            height: menuBarHeight
+        )
+    }
+
     /// Captures the menu bar band of the display that currently owns the menu
     /// bar, through the same capture entry point the item pipeline uses.
     private func runInspection() {
@@ -126,12 +150,9 @@ struct CaptureInspectorSection: View {
             return
         }
 
-        let menuBarHeight = screen.getMenuBarHeightEstimate()
-        let frame = CGRect(
-            x: screen.frame.origin.x,
-            y: screen.frame.maxY - menuBarHeight,
-            width: screen.frame.width,
-            height: menuBarHeight
+        let frame = Self.menuBarBand(
+            inDisplayBounds: CGDisplayBounds(screen.displayID),
+            menuBarHeight: screen.getMenuBarHeightEstimate()
         )
 
         isCapturing = true
