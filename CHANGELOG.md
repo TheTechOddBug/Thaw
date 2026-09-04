@@ -108,6 +108,42 @@ Three things from the 2.1 preview line are still on their way to macOS 27.
 - **Every ScreenCaptureKit call has a watchdog**, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
 - **Less idle work.** The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
 
+## [2.1.0-beta.2]
+
+Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
+
+Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+Four fixes, nothing new. The worst of them is not a beta bug at all: changing menu bar spacing could kill Spotlight outright, and it stayed gone until the machine was rebooted (#720, found and fixed by @commanderk33n). Because spacing is re-applied whenever a display connects or disconnects, it fired again on every dock and undock. From the beta.1 reports: revealing a hidden item could drop it on the wrong side of the chevron, so the reveal failed and the item stayed put (#1035); the "Thaw took too long to respond" report turned out to be a Control Center window left behind by an exited Thaw process, freezing the item cache for as long as it stuck around (#1032); and the Capture Inspector was showing people the bottom of their screen instead of their menu bar (#1033).
+
+---
+
+### Upgrade from 2.1.0-beta.1
+
+1. Update in place through Sparkle on the beta channel. Stable stays on 2.0.1 until 2.1.0 leaves beta.
+2. No schema or `defaults` changes. Profiles, saved layouts, and hotkeys carry over untouched.
+3. If you have been clearing a stuck menu bar with `killall ControlCenter`, you should not need to after this update.
+4. Menu bar items that launchd owns, Spotlight and Dock and WindowManager among them, are now restarted through `launchctl` when a spacing change is applied. That is a hard restart rather than the graceful quit they used to get, which is the operation launchd is built for but is still a change in behavior.
+
+---
+
+### Main fixes
+
+1. Changing menu bar spacing no longer kills Spotlight until the next reboot (#720, thanks @commanderk33n). Thaw terminated each menu bar item and relaunched it with `NSWorkspace.openApplication(at:)`, which makes Thaw the launching parent. A system LaunchAgent can carry a launch constraint that permits launchd as its only launching parent, so the kernel killed the new process at exec: every `Spotlight-*.ips` report ends in a CODESIGNING termination, "Launch Constraint Violation", with no frames on the faulting thread and a process that lived about ten milliseconds. Two things then made it permanent. The fallback relaunch retried the same illegal launch and produced a second crash report about eight seconds later, and `com.apple.Spotlight` sets `KeepAlive.SuccessfulExit=false`, so launchd would not respawn it either: `terminate()` is a successful exit. Spacing is re-applied on display connect and disconnect, which is why this landed on every dock and undock. Items owned by a system LaunchAgent are now restarted with `launchctl kickstart -k gui/<uid>/<label>` at both relaunch sites. The label comes from the agent's own plist rather than from the bundle identifier, because the two diverge on exactly the items that matter: `com.apple.dock` is labelled `com.apple.Dock.agent`, `com.apple.systemuiserver` is `com.apple.SystemUIServer.agent`, and nine of the twenty-six LaunchAgent-backed processes on a stock system differ this way, so a bundle-identifier rule would have rescued Spotlight and quietly missed the rest. `launchctl` is declared in `Info.plist` the way the existing `defaults` path is, so it is never resolved through `PATH`.
+2. A Control Center window left behind by an exited Thaw no longer freezes the item cache (#1032). Control Center can outlive the Thaw process whose status item it hosted and go on serving the window. The reporter carried one across three relaunches until `killall ControlCenter` cleared it: window 639, tagged under Thaw's own bundle identifier, capturing no image and answering to no owner. Thaw took it for one of its own twice over. It was planned against as an unmanaged item, so live items were moved relative to a window with nothing behind it, and the log has Battery moved to the right of it. It is also self-titled under Thaw's own namespace, which makes it the first signal read as a bar-wide window-name degradation, so every reading that contained it was thrown away as a failed observation: 436 of them across the reporter's three logs, each one holding a cache that had been stale since the orphan appeared. A reorder planned against a frozen cache is the "took too long to respond" the report is titled after. These windows are now dropped alongside the duplicate control items, before the degradation check, which already expects ghost windows to be gone by the time it runs. Ownership is decided by window number rather than by title, so a control item of Thaw's own whose title really has degraded stays in the reading and still reaches that check.
+3. Revealing a hidden item lands it on the side of the chevron it was aimed at (#1035). A temporary show drops the item left of the chevron at exactly the chevron's own minX. That coordinate is the boundary itself, so AppKit is free to place the item on either side of it, and here it picked the wrong side: attempt 2 in the reporter's log planned a target of 837.0 and then measured the item at 863.0, past the trailing edge of a 26pt chevron. The ordinal check rejected that landing, correctly. The one-point bias added for #923 already solves this, but it skipped the chevron on the grounds that the chevron divides no sections and so resolves no ambiguity. What makes a drop point ambiguous is that it is an item's own edge; whether the item divides two sections has nothing to do with it. The chevron is biased now too. The retry budget behind that move is also restored: the fast path cut it to 2 in 2.0.0-beta.2 so that a failing retry loop would not show as jitter, which left a reveal one wrong guess away from giving up, and that is where the reporter's bisect lands, since 1.2.0 gave the move all 8 attempts. The second half of the report stays open. A move that exhausts its attempts still delivers a real click to whatever sits under the cursor.
+4. The Capture Inspector shows the menu bar rather than the bottom of the screen (#1033). It built its band from `NSScreen.frame`, which puts the origin at the bottom left, and then handed that band to a capture path that assigns it to `SCStreamConfiguration.sourceRect`, where the origin is at the top left and y increases downward. Read the second way, `frame.maxY - menuBarHeight` is a distance measured down from the top of the display, so on a display of height H the inspector selected the strip at H minus the menu bar height: the bottom edge of the screen, and whatever window happened to be sitting there. Nothing downstream could catch it. Both readings produce a band of identical size, so the pixel dimensions in the log looked right, and the rect stayed inside the display so the bounds guard passed. The band now comes from `CGDisplayBounds`, which is already in the coordinate space the capture expects, and the screen bounds, display frame, and computed source rect are all logged, so a future misplacement is legible from a log instead of only from a screenshot.
+
+---
+
+### Dependencies & localization
+
+- Source strings repaired, including the automatic grammar agreement that two of them had lost (#1036).
+- Crowdin sync for `Localizable.xcstrings` (#1030, #1037). Russian is the big mover, from 69.3% of the catalogue to 82.6%.
+- The build and release workflows run on macOS 27 runners (#1034).
+- Copyright headers updated across the project (#1026).
+- Two triple-nested closures unnested, which clears both open SonarCloud maintainability issues.
+
 ## [2.1.0-beta.1]
 
 Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
