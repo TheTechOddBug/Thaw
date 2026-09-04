@@ -27,6 +27,8 @@
 	<string>https://github.com/sponsors/stonerl</string>
 	<key>ThawMenuBarItemSpacingExecutableURI</key>
 	<string>file:///usr/bin/defaults</string>
+	<key>ThawLaunchctlExecutableURI</key>
+	<string>file:///bin/launchctl</string>
 	<key>ThawRepositoryURL</key>
 	<string>https://github.com/thaw-app/Thaw</string>
 	<key>ThawSkyLightFrameworkPath</key>
